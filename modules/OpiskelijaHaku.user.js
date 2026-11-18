@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.5.1
+// @version      0.5.2
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -164,6 +164,49 @@ if(blocks.length&&foundCourses===0)throw Error('Työjärjestysmerkintöjä löyt
 // Genuine empty results are possible after applying date/time filters.
 return {rows:out,stats:{blocks:blocks.length,courses:foundCourses,ignoredByDate,ignoredByTime}};
 }
+function parseExportSchedule(data,person,week,from,to,clockRange){
+  if(!data||!Array.isArray(data.Schedule))return null;
+  const out=[];
+  const parseTime=v=>{
+    const m=/^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(v||''));
+    return m?+m[1]*60+(+m[2]):null;
+  };
+  for(const entry of data.Schedule){
+    const day=Number(entry?.Day);
+    if(!Number.isInteger(day)||day<1||day>7)continue;
+    const d=new Date(week);d.setDate(week.getDate()+day-1);
+    if(d<from||d>to)continue;
+    const start=parseTime(entry.Start),end=parseTime(entry.End);
+    const time=start!==null&&end!==null&&end>start?{start,end}:null;
+    if(clockRange&&(!time||time.end<=clockRange.start||time.start>=clockRange.end))continue;
+    for(const group of Array.isArray(entry.Groups)?entry.Groups:[]){
+      const course=clean(group?.FullCaption||group?.Caption||group?.ShortCaption);
+      if(!course)continue;
+      const groupName=clean(group?.Class||entry.Class||'');
+      const teacherList=new Map();
+      for(const t of Array.isArray(group.Teachers)?group.Teachers:[]){
+        const id=String(t?.Id||'');
+        if(!/^\d+$/.test(id))continue;
+        teacherList.set(id,{id,name:clean(t.LongCaption||t.Caption||'Opettaja')});
+      }
+      out.push({person,course,group:groupName,teachers:[...teacherList.values()],
+        week:iso(week),lesson:{date:iso(d),time,week:iso(week)},partial:false});
+    }
+  }
+  return out;
+}
+async function tryExportSchedule(person,week,from,to,clockRange,signal){
+  const url=new URL('/schedule/export/students/'+encodeURIComponent(person.id)+'/',location.origin);
+  url.searchParams.set('date',fi(week));
+  const response=await fetch(url.href,{credentials:'same-origin',signal,headers:{Accept:'application/json'}});
+  if(!response.ok)return null;
+  const type=response.headers.get('content-type')||'';
+  if(!/json/i.test(type))return null;
+  const data=await response.json();
+  const rows=parseExportSchedule(data,person,week,from,to,clockRange);
+  if(!rows?.length)return null;
+  return {rows,stats:{blocks:rows.length,courses:rows.length,ignoredByDate:0,ignoredByTime:0,source:'json'}};
+}
 async function renderedSchedule(url,signal){
   // Wilma may create timetable blocks client-side after the HTML has loaded.
   // The iframe executes Wilma's own scripts and is never used to bypass permissions.
@@ -215,6 +258,12 @@ const dates=[];for(let d=weekStart(from);d<=to;d.setDate(d.getDate()+7))dates.pu
 if(dates.length*picked.size>120){say('Rajaa hakua: enintään 120 työjärjestyshakua kerralla.',true);return}
 abort=new AbortController();const signal=abort.signal;search.disabled=true;cancel.disabled=false;results.replaceChildren();
 const tasks=[...picked.values()].flatMap(p=>dates.map(d=>async()=>{
+// Prefer structured Wilma timetable data with explicit Day/Start/End.
+try{
+  const exported=await tryExportSchedule(p,d,from,to,clockRange,signal);
+  if(exported)return exported;
+}catch(e){if(signal.aborted)throw e}
+// Not all Wilma instances grant access to export; fall back to existing view.
 const u=new URL('/profiles/students/'+p.id+'/schedule',location.origin);u.searchParams.set('date',fi(d));
 const response=await fetch(u,{credentials:'same-origin',signal});
 if(!response.ok)throw Error('HTTP '+response.status);
