@@ -1,9 +1,11 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.5.6
+// @version      0.6.0
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
+// @match        https://*.inschool.fi/profiles/teachers*
+// @match        https://*.inschool.fi/
 // @run-at       document-idle
 // @grant        none
 // @updateURL    https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js
@@ -12,9 +14,12 @@
 (() => {
 'use strict';
 // Prevent duplicated tool initialization inside the hidden schedule viewer.
-if(window.top!==window.self)return;
+const embedPage=new URLSearchParams(location.search).get('oh_embed')==='1';
+if(window.top!==window.self&&!embedPage)return;
+const homePage=location.pathname==='/';
 const directoryPage=/^\/profiles\/students\/?$/.test(location.pathname);
-if(!/^\/profiles\/students(?:\/|$)/.test(location.pathname)||document.getElementById('oh-tab'))return;
+const profilesPage=/^\/profiles\/(students|teachers)(?:\/|$)/.test(location.pathname);
+if(!homePage&&!profilesPage||document.getElementById('oh-tab')||document.getElementById('oh-home'))return;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e};
 const clean=s=>String(s||'').trim().replace(/\s+/g,' ');
@@ -31,6 +36,42 @@ const parseDate=v=>{const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(v||'');if(!m)return n
 const weekStart=d=>{const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));return x};
 const css=make('style');css.textContent='#oh-panel{padding:16px;min-height:300px}#oh-panel *{box-sizing:border-box}#oh-panel .oh-fields{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}#oh-panel label{display:flex;flex-direction:column;gap:4px;flex:1;min-width:145px}#oh-panel input,#oh-panel textarea{border:1px solid #aab9c5;border-radius:4px;padding:8px;width:100%}#oh-panel textarea{min-height:100px}#oh-panel button{padding:7px 11px;margin:4px;border:1px solid #abc;background:#fff;border-radius:4px;cursor:pointer}#oh-panel button:disabled{opacity:.5}#oh-panel .oh-action{background:#176393;color:white}#oh-panel .oh-scroll{overflow:auto}#oh-panel table{width:100%;border-collapse:collapse}#oh-panel th,#oh-panel td{text-align:left;padding:8px;border-bottom:1px solid #dae1e6;vertical-align:top}#oh-panel th{background:#edf2f6}#oh-panel .oh-pill{display:inline-block;background:#eef5fa;padding:3px 6px;margin:3px;border-radius:4px}#oh-panel .oh-help{color:#576b79;font-size:12px;white-space:pre-wrap}@media(max-width:650px){#oh-panel label{min-width:100%}}';
 css.textContent+='#oh-panel .oh-chooser{max-width:650px;margin:10px 0}#oh-panel .oh-choices{max-height:250px;overflow:auto;border:1px solid #b5c6d1;border-radius:5px;padding:4px;background:#fff}#oh-panel .oh-choice{display:block;width:100%;text-align:left;margin:0;padding:7px;border:0;border-bottom:1px solid #edf0f2;border-radius:0;background:#fff;color:#234b63}#oh-panel .oh-choice:hover{background:#eaf5fb}#oh-panel .oh-choice.oh-chosen{background:#dff0e5;color:#204b31;font-weight:600}#oh-panel .oh-time-toggle{display:flex;align-items:center;gap:8px;margin:8px 0;flex-direction:row;width:max-content;cursor:pointer}#oh-panel [hidden]{display:none!important}';document.head.append(css);
+if(homePage){
+  const panel=make('section');panel.id='oh-home';
+  panel.style.cssText='background:#fff;border:1px solid #c6d8e3;border-radius:7px;padding:12px;margin:12px 0;box-shadow:0 1px 5px #00000012';
+  const heading=make('h2','','Opiskelija- ja opettajahaku');heading.style.cssText='font-size:19px;margin:0 0 9px';
+  const controls=make('div');controls.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:8px';
+  const type=make('select');type.setAttribute('aria-label','Haettava henkilöryhmä');
+  for(const [value,label] of [['students','Opiskelijat'],['teachers','Opettajat']]){
+    const opt=make('option','',label);opt.value=value;type.append(opt);
+  }
+  const q=make('input');q.type='search';q.placeholder='Hae nimellä…';q.setAttribute('aria-label','Hae henkilöä');
+  q.style.cssText='flex:1;min-width:160px;max-width:430px;padding:7px';
+  const go=make('button','oh-action','Hae');
+  const expand=make('button','','Laajenna haku');
+  const frameHolder=make('div');frameHolder.hidden=true;
+  const frame=make('iframe');frame.title='Laajennettu opiskelija- ja opettajahaku';frame.style.cssText='width:100%;height:680px;border:1px solid #dde6eb;border-radius:5px;margin-top:10px;background:#fff';
+  const url=()=>{
+    const u=new URL('/profiles/students/',location.origin);
+    u.searchParams.set('oh_type',type.value);
+    if(q.value.trim())u.searchParams.set('oh_q',q.value.trim());
+    u.hash='opiskelijahaku';return u;
+  };
+  const navigate=()=>location.assign(url().href);
+  q.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();navigate()}});
+  go.onclick=navigate;
+  expand.onclick=()=>{
+    frameHolder.hidden=!frameHolder.hidden;
+    expand.textContent=frameHolder.hidden?'Laajenna haku':'Pienennä haku';
+    if(!frameHolder.hidden){
+      const u=url();u.searchParams.set('oh_embed','1');frame.src=u.href;
+    }else frame.removeAttribute('src');
+  };
+  controls.append(type,q,go,expand);frameHolder.append(frame);panel.append(heading,controls,frameHolder);
+  const mount=$('main#main-content')||$('main')||document.querySelector('.container-fluid')||document.body;
+  mount.prepend(panel);
+  return;
+}
 const tabs=$('main#main-content ul.nav.nav-tabs-primary')||$('ul.nav.nav-tabs-primary');
 if(!tabs){console.warn('[OpiskelijaHaku] Välilehtipalkkia ei löydy');return}
 const li=make('li');li.id='oh-tab';
@@ -42,15 +83,21 @@ if(!directoryPage)return; // Student profiles: keep Wilma's own tabs and navigat
 const native=$('main#main-content .panel.tab-content')||$('.panel.tab-content');
 if(!native){li.remove();console.warn('[OpiskelijaHaku] Sisältöpaneelia ei löydy');return}
 const panel=make('section');panel.id='oh-panel';panel.hidden=true;native.insertAdjacentElement('afterend',panel);
-let active=false,abort=null,rows=[],picked=new Map(),directory=new Map(),directoryLoading=false,directoryLoaded=false;
+let active=false,abort=null,rows=[],picked=new Map(),directory=new Map(),teacherDirectory=new Map(),directoryLoading=false,directoryLoaded=false,teacherDirectoryLoaded=false;
 function changeTab(enabled){active=enabled;panel.hidden=!enabled;native.style.display=enabled?'none':'';li.classList.toggle('active',enabled);link.setAttribute('aria-selected',String(enabled))}
 link.onclick=e=>{e.preventDefault();$$('li.active',tabs).forEach(n=>n.classList.remove('active'));changeTab(true);renderChoices()};
 tabs.addEventListener('click',e=>{if(!e.target.closest('#oh-tab')&&e.target.closest('a'))changeTab(false)});
-panel.append(make('h2','','OpiskelijaHaku'),make('p','oh-help','Suodata Wilman opiskelijaluetteloa nimellä ja valitse opiskelijat napsauttamalla. Voit valita useita opiskelijoita.'));
+panel.append(make('h2','','Opiskelija- ja opettajahaku'),make('p','oh-help','Hae opiskelijoita tai opettajia nimellä, valitse henkilöt ja tarkastele työjärjestysten opintojaksoja, ajankohtia ja opetustiloja.'));
 const chooser=make('div','oh-chooser'),chooserLabel=make('label'),filter=make('input');
+const type=make('select');type.setAttribute('aria-label','Henkilöryhmä');
+for(const [value,label] of [['students','Opiskelijat'],['teachers','Opettajat']]){
+  const option=make('option','',label);option.value=value;type.append(option);
+}
+type.style.cssText='padding:8px;max-width:220px;margin-bottom:8px';
+chooser.append(type);
 filter.type='search';filter.placeholder='Hae opiskelijaa nimellä…';filter.autocomplete='off';
-chooserLabel.append(make('strong','','Etsi opiskelijaa'),filter);chooser.append(chooserLabel);
-const chooserActions=make('div'),refresh=make('button','','Päivitä opiskelijaluettelo'),directoryStatus=make('span','oh-help','');
+chooserLabel.append(make('strong','','Etsi henkilöä'),filter);chooser.append(chooserLabel);
+const chooserActions=make('div'),refresh=make('button','','Päivitä luettelo'),directoryStatus=make('span','oh-help','');
 chooserActions.append(refresh,directoryStatus);chooser.append(chooserActions);
 const choices=make('div','oh-choices');choices.setAttribute('role','listbox');choices.setAttribute('aria-multiselectable','true');chooser.append(choices);panel.append(chooser);
 const form=make('div','oh-fields');
@@ -62,7 +109,19 @@ form.append(startLabel,endLabel);panel.append(form,timeLabel,clock);
 const actions=make('div'),search=make('button','oh-action','Hae työjärjestykset'),cancel=make('button','','Keskeytä'),reset=make('button','','Tyhjennä valinnat');cancel.disabled=true;actions.append(search,cancel,reset);panel.append(actions);
 const selection=make('div'),status=make('p','oh-help'),results=make('div','oh-scroll');panel.append(selection,status,results);
 const say=(m,error)=>{status.textContent=m;status.style.color=error?'#9e2828':'#345d76'};
-function readNames(doc){for(const a of $$('a[href]',doc)){let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}if(u.origin!==location.origin)continue;const m=studentRe.exec(u.pathname);if(!m)continue;const n=clean(a.textContent);if(n.length>2&&n.length<120)directory.set(m[1],{id:m[1],name:n})}}
+const personKey=p=>(p.type||'student')+':'+p.id;
+type.onchange=()=>{filter.placeholder=type.value==='teachers'?'Hae opettajaa nimellä…':'Hae opiskelijaa nimellä…';renderChoices();if(filter.value&&!directoryLoading)readDirectory()};
+
+function readNames(doc,kind='students'){
+const re=kind==='teachers'?teacherRe:studentRe,store=kind==='teachers'?teacherDirectory:directory;
+for(const a of $$('a[href]',doc)){
+  let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}
+  if(u.origin!==location.origin)continue;
+  const m=re.exec(u.pathname);if(!m)continue;
+  const n=clean(a.textContent);
+  if(n.length>2&&n.length<120)store.set(m[1],{id:m[1],name:n,type:kind==='teachers'?'teacher':'student'});
+}
+}
 // Do not seed the picker from the default 'Ohjaamasi tai valvomasi opiskelijat' overview.
 // Names are loaded explicitly from the directory's full-list / alphabetical views.
 function renderChoices(){
