@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WilmaTools - Message Autosaver (Chrome Desktop)
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.16.15
+// @version      0.16.16
 // @description  Chrome desktop local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
@@ -1071,6 +1071,18 @@
             const html=body?safe.innerHTML.replace(/\r?\n/g,'<br>'):String(request.bodyHtml||'');
             applySaved({subject:String(request.subject||''),bodyHtml:html},false);
           }
+        }
+        if(request.savedRecipients&&!new URLSearchParams(location.search).toString()){
+          // OpiskelijaHaku opened a fresh blank compose page for a historical
+          // draft without native IDs. Restore its saved recipient snapshot here.
+          restoreRecipients(request.savedRecipients).then(ok=>{
+            if(!ok){
+              const warning=document.createElement('p');
+              warning.textContent='Luonnoksen vastaanottajia ei voitu palauttaa automaattisesti. Valitse ne käsin ennen lähettämistä.';
+              warning.style.cssText='padding:8px;color:#9a4e13';
+              ($(SEL.recipientsCell)?.parentElement||document.body).prepend(warning);
+            }
+          }).catch(e=>console.warn('[WilmaTools] Snapshot recipient restore failed:',e));
         }
         if(Array.isArray(request.missingRecipients)&&request.missingRecipients.length){
           const note=document.createElement('aside');
