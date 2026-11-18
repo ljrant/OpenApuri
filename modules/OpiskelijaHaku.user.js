@@ -127,50 +127,73 @@ for(const a of $$('a[href]',doc)){
 function renderChoices(){
 choices.replaceChildren();
 const q=norm(filter.value);
-const matches=[...directory.values()].filter(p=>nameMatches(p.name,q)).sort((a,b)=>a.name.localeCompare(b.name,'fi'));
+const teacherMode=type.value==='teachers',store=teacherMode?teacherDirectory:directory;
+const loaded=teacherMode?teacherDirectoryLoaded:directoryLoaded;
+const matches=[...store.values()].filter(p=>nameMatches(p.name,q)).sort((a,b)=>a.name.localeCompare(b.name,'fi'));
 const visible=matches.slice(0,80);
-if(!visible.length){choices.append(make('div','oh-help',directoryLoading?'Opiskelijaluetteloa ladataan…':directoryLoaded?'Ei osumia.':'Opiskelijaluetteloa ei ole vielä ladattu. Kirjoita hakusana tai paina Päivitä opiskelijaluettelo.'));return}
+if(!visible.length){choices.append(make('div','oh-help',directoryLoading?'Nimiluetteloa ladataan…':loaded?'Ei osumia.':'Luetteloa ei ole vielä ladattu. Kirjoita hakusana tai paina Päivitä luettelo.'));directoryStatus.textContent='';return}
 const fragment=document.createDocumentFragment();
 for(const person of visible){
-const b=make('button','oh-choice'+(picked.has(person.id)?' oh-chosen':''),(picked.has(person.id)?'✓  ':'')+person.name);
-b.type='button';b.setAttribute('role','option');b.setAttribute('aria-selected',String(picked.has(person.id)));
-b.onclick=()=>{if(picked.has(person.id))picked.delete(person.id);else if(picked.size<20)picked.set(person.id,person);else{say('Enintään 20 opiskelijaa kerrallaan.',true);return}renderPicked();renderChoices()};
+const b=make('button','oh-choice'+(picked.has(personKey(person))?' oh-chosen':''),(picked.has(personKey(person))?'✓  ':'')+person.name);
+b.type='button';b.setAttribute('role','option');b.setAttribute('aria-selected',String(picked.has(personKey(person))));
+b.onclick=()=>{if(picked.has(personKey(person)))picked.delete(personKey(person));else if(picked.size<20)picked.set(personKey(person),person);else{say('Enintään 20 opiskelijaa kerrallaan.',true);return}renderPicked();renderChoices()};
 fragment.append(b);
 }
 choices.append(fragment);
-directoryStatus.textContent=(directoryLoading?'Ladataan: ':'Luettelossa: ')+directory.size+' opiskelijaa · osumia '+matches.length+(matches.length>visible.length?' (näytetään 80 ensimmäistä)':'');
+directoryStatus.textContent=(directoryLoading?'Ladataan: ':'Luettelossa: ')+store.size+(teacherMode?' opettajaa':' opiskelijaa')+' · osumia '+matches.length+(matches.length>visible.length?' (näytetään 80 ensimmäistä)':'');
 }
-filter.addEventListener('input',()=>{renderChoices();if(!directoryLoaded&&!directoryLoading)readDirectory()});
-async function readDirectory(){
-if(directoryLoading)return;
-directoryLoading=true;refresh.disabled=true;renderChoices();say('Ladataan Wilman opiskelijaluetteloa…');
-try{
-const urls=new Map();
-const directoryLinks=$$('main#main-content a[href]').filter(a=>!a.closest('#oh-panel'));
-for(const a of directoryLinks){
-  let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}
-  if(u.origin!==location.origin||studentRe.test(u.pathname))continue;
-  const isAlphabetical=/^\/profiles\/students\/[a-zåäö](?:\/)?$/i.test(u.pathname);
-  const isAllTab=norm(a.textContent)==='kaikki'&&/^\/profiles\/students\/?$/.test(u.pathname);
-  if(isAlphabetical||isAllTab)urls.set(u.href,u);
+filter.addEventListener('input',()=>{renderChoices();if(!(type.value==='teachers'?teacherDirectoryLoaded:directoryLoaded)&&!directoryLoading)readDirectory()});
+async function readDirectory(force=false){
+  if(directoryLoading)return;
+  const kind=type.value,teacherMode=kind==='teachers',store=teacherMode?teacherDirectory:directory;
+  if(!force&&(teacherMode?teacherDirectoryLoaded:directoryLoaded))return;
+  directoryLoading=true;refresh.disabled=true;renderChoices();
+  say('Ladataan Wilman '+(teacherMode?'opettaja':'opiskelija')+'luetteloa…');
+  try{
+    const base='/profiles/'+kind;
+    const directoryLinks=[];
+    // Never seed the student directory from the default "Ohjaamasi" page.
+    // Teacher directory has its own native page, which is fetched with credentials.
+    if(teacherMode){
+      const r=await fetch(base,{credentials:'same-origin'});
+      if(!r.ok)throw Error('Opettajaluettelo HTTP '+r.status);
+      const doc=new DOMParser().parseFromString(await r.text(),'text/html');
+      readNames(doc,kind);
+      directoryLinks.push(...$$('a[href]',doc));
+    }else directoryLinks.push(...$$('main#main-content a[href]').filter(a=>!a.closest('#oh-panel')));
+    const urls=new Map();
+    for(const a of directoryLinks){
+      let u;try{u=new URL(a.getAttribute('href'),location.origin)}catch{continue}
+      if(u.origin!==location.origin)continue;
+      const path=u.pathname.replace(/\/$/,'');
+      const isAlpha=new RegExp('^'+base+'/[a-zåäö]$','i').test(path);
+      const isAll=path===base+'/all'||(path===base&&norm(a.textContent)==='kaikki');
+      if(isAlpha||isAll)urls.set(u.href,u);
+    }
+    const queue=[...urls.values()].slice(0,42);
+    let at=0,finished=0,failed=0;
+    async function worker(){
+      while(at<queue.length){
+        const url=queue[at++];
+        try{
+          const response=await fetch(url.href,{credentials:'same-origin'});
+          if(!response.ok)throw Error('HTTP '+response.status);
+          readNames(new DOMParser().parseFromString(await response.text(),'text/html'),kind);
+        }catch(e){failed++;console.warn('[OpiskelijaHaku] Henkilöluettelon sivu epäonnistui:',e)}
+        finished++;
+        if(finished%3===0&&type.value===kind)renderChoices();
+      }
+    }
+    await Promise.all(Array.from({length:Math.min(4,queue.length)},worker));
+    if(teacherMode)teacherDirectoryLoaded=true;else directoryLoaded=queue.length>0;
+    if(!queue.length&&!teacherMode){
+      say('Opiskelijaluettelon Kaikki-/aakkoslinkkejä ei löytynyt. Ohjaamasi opiskelijat -osiota ei käytetä hakulähteenä.',true);
+    }else say('Luettelo ladattu: '+store.size+' henkilöä.'+(failed?' '+failed+' sivua ei voitu avata.':''),failed>0);
+  }catch(e){say('Luettelon lataus epäonnistui: '+e.message,true)}
+  finally{directoryLoading=false;refresh.disabled=false;renderChoices()}
 }
-// Some Wilma instances use a separate /all directory route.
-for(const a of directoryLinks){
-  let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}
-  if(u.origin===location.origin&&/^\/profiles\/students\/all\/?$/i.test(u.pathname))urls.set(u.href,u);
-}
-const queue=[...urls.values()].slice(0,38);
-if(!queue.length){say('Kaikki- tai aakkosluettelon linkkejä ei löytynyt. Ohjaamasi tai valvomasi opiskelijat -osion nimiä ei lisätä automaattisesti.',true);return}
-let at=0,finished=0,failed=0;
-async function worker(){while(at<queue.length){const u=queue[at++];try{const r=await fetch(u.href,{credentials:'same-origin'});if(!r.ok)throw Error('HTTP '+r.status);readNames(new DOMParser().parseFromString(await r.text(),'text/html'))}catch(e){failed++;console.warn('[OpiskelijaHaku] Opiskelijaluetteloa ei saatu:',e)}finished++;directoryStatus.textContent='Luettelot '+finished+'/'+queue.length+' · opiskelijoita '+directory.size;if(finished%4===0)renderChoices()}}
-await Promise.all(Array.from({length:Math.min(4,queue.length)},worker));
-directoryLoaded=true;renderChoices();say('Opiskelijaluettelo ladattu: '+directory.size+' opiskelijaa.'+(failed?' '+failed+' sivua ei voitu hakea.':''));
-}catch(e){say('Luettelon lataus epäonnistui: '+e.message,true)}
-finally{directoryLoading=false;refresh.disabled=false;renderChoices()}
-}
-refresh.onclick=()=>{directoryLoaded=false;readDirectory()};
-
-function renderPicked(){selection.replaceChildren(make('strong','','Valitut opiskelijat ('+picked.size+')'));const line=make('div');for(const p of picked.values()){const pill=make('span','oh-pill',p.name+' ');const remove=make('button','','×');remove.title='Poista';remove.onclick=()=>{picked.delete(p.id);renderPicked();renderChoices()};pill.append(remove);line.append(pill)}selection.append(line)}
+refresh.onclick=()=>{if(type.value==='teachers')teacherDirectoryLoaded=false;else directoryLoaded=false;readDirectory(true)};
+function renderPicked(){selection.replaceChildren(make('strong','','Valitut henkilöt ('+picked.size+')'));const line=make('div');for(const p of picked.values()){const pill=make('span','oh-pill',p.name+' ');const remove=make('button','','×');remove.title='Poista';remove.onclick=()=>{picked.delete(personKey(p));renderPicked();renderChoices()};pill.append(remove);line.append(pill)}selection.append(line)}
 cancel.onclick=()=>abort?.abort();
 reset.onclick=()=>{picked.clear();rows=[];filter.value='';results.replaceChildren();renderPicked();renderChoices();say('Valinnat tyhjennetty.')};
 function blockMoment(block,week){
@@ -589,5 +612,14 @@ openMessage.onclick=()=>composeForSelection(chosen(),{students:kinds.students.ch
 }
 
 renderPicked();renderChoices();
-if(location.hash==='#opiskelijahaku')link.click();
+if(directoryPage){
+  const params=new URLSearchParams(location.search);
+  const requested=params.get('oh_type');if(requested==='teachers')type.value='teachers';
+  filter.value=params.get('oh_q')||'';
+  link.click();
+  if(filter.value)readDirectory();
+  if(embedPage){
+    const hide=make('style');hide.textContent='body>header,body>nav,#navigation,.navbar,.breadcrumb,#oh-tab{display:none!important} main#main-content{padding:0!important} #oh-panel{padding:8px!important}';document.head.append(hide);
+  }
+}
 })();
