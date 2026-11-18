@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.6.1
+// @version      0.6.2
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
@@ -115,7 +115,7 @@ type.onchange=()=>{filter.placeholder=type.value==='teachers'?'Hae opettajaa nim
 function readNames(doc,kind='students'){
 const re=kind==='teachers'?teacherRe:studentRe,store=kind==='teachers'?teacherDirectory:directory;
 for(const a of $$('a[href]',doc)){
-  let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}
+  let u;try{u=new URL(a.getAttribute('href'),kind==='teachers'?location.origin+'/profiles/teachers/':location.href)}catch{continue}
   if(u.origin!==location.origin)continue;
   const m=re.exec(u.pathname);if(!m)continue;
   const n=clean(a.textContent);
@@ -163,7 +163,7 @@ async function readDirectory(force=false){
     }else directoryLinks.push(...$$('main#main-content a[href]').filter(a=>!a.closest('#oh-panel')));
     const urls=new Map();
     for(const a of directoryLinks){
-      let u;try{u=new URL(a.getAttribute('href'),location.origin)}catch{continue}
+      let u;try{u=new URL(a.getAttribute('href'),location.origin+base+'/')}catch{continue}
       if(u.origin!==location.origin)continue;
       const path=u.pathname.replace(/\/$/,'');
       const isAlpha=new RegExp('^'+base+'/[a-zåäö]$','i').test(path);
