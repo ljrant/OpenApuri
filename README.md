@@ -12,7 +12,7 @@ Asenna Tampermonkey ja haluamasi skriptit. Tietokoneella sivupaneeli ja varsinai
 | --- | --- | --- |
 | WilmaTools-sivupaneeli (tietokone) | 0.20.2 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/desktop-toolbar.user.js) |
 | Ryhmänohjaajan opintoseuranta | 0.20.2 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/WilmaTools.user.js) |
-| OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.5.4 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) |
+| OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.5.6 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) |
 | Viestiluonnosten tallennus – Chrome tietokoneella | 0.12.4 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/message-autosaver-chrome-desktop.user.js) |
 | Viestiluonnosten tallennus – Firefox Androidissa (kokeellinen) | 0.6.0 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/message-autosaver-firefox-android.user.js) |
 
@@ -54,7 +54,7 @@ Chrome-tietokoneversion automaattitallennin säilyttää viestin aiheen, sisäll
 Firefox Android -versio on **kokeellinen**, toimii vain Androidin Firefox-selaimessa ja tarvitsee yhteensopivan käyttäjäskriptilaajennuksen. Katso [erilliset ohjeet](https://ljrant.github.io/WilmaTools/firefox-android.html).
 
 
-## OpiskelijaHaku (v0.5.4)
+## OpiskelijaHaku (v0.5.6)
 
 OpiskelijaHaku-välilehti näkyy myös opiskelijakohtaisilla `/profiles/students/...`-alisivuilla: alisivulta se avaa opiskelijaluettelon OpiskelijaHaku-välilehden. Haku itsessään sijaitsee edelleen luettelon pääsivulla.
 
@@ -201,3 +201,8 @@ Opiskelijakohtainen opintojaksolista näyttää tunnistettavat oppitunnin päiv�
 Tallennetun luonnoksen vaihtaminen avaa uuden Wilma-viestipohjan, jotta edellisen luonnoksen vastaanottajat eivät jää valituiksi. OpiskelijaHaun luonnosvalinnassa voi käyttää joko valitun luonnoksen tallennettuja vastaanottajia (korvaa hakutulosten vastaanottajavalinnan) tai valittujen opiskelijoiden/opettajien vastaanottajia. Luonnoksen tallennettujen vastaanottajien tulee sisältää vahvistettuja Wilman tunnisteita; vanhoille ilman tunnisteita tallennetuille luonnoksille yritetään palautusta Wilman vastaanottajavalitsimella.
 
 Työjärjestysten tarkan ajan haku käyttää ensisijaisesti saman kirjautuneen Wilma-istunnon JSON-työjärjestysvientiä (`/schedule/export/students/:id/`), jonka `Day`, `Start` ja `End` mahdollistavat oppitunnin päivämäärän ja kellonaikojen näyttämisen. Jos vienti ei ole saatavissa tai tuota kursseja, käytetään vanhaa HTML-työjärjestystä, jossa tarkat ajankohdat eivät aina ole koneellisesti saatavilla. Testaa saatavuus omassa Wilmassa; tarkista vastaanottajat ennen lähettämistä.
+
+
+### OpiskelijaHaku v0.5.6 – työjärjestyksen näkyvien koordinaattien lukeminen
+
+Wilman opiskelijatyöjärjestyksen JSON-vienti palautti testatussa ympäristössä HTTP 403, joten se ei ole käyttökelpoinen siellä. Kun oppituntien ajat puuttuvat HTML-otsikoista, OpiskelijaHaku lataa kirjautuneen käyttäjän normaalin työjärjestysnäkymän piilotettuun selainkehykseen ja yrittää määrittää tarkan päivän viikonpäiväotsikon sekä alkamis- ja päättymisajan näkyvän tuntiasteikon perusteella. Näkymä puretaan ennen kehyksen poistamista; pelkkää raaka-HTML:ää ei voi käyttää pikselikoordinaattien mittaamiseen. Jos otsikkoa tai asteikkoa ei tunnisteta luotettavasti, ajankohta näytetään edelleen puuttuvana. JSON-vientikyselyä ei toisteta HTTP 403 -vastauksen jälkeen.
