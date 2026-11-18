@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WilmaTools - Message Autosaver (Chrome Desktop)
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.16.13
+// @version      0.16.14
 // @description  Chrome desktop local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
@@ -613,16 +613,29 @@
         const recipientQuery=[...new URLSearchParams(location.search)]
           .filter(([k,v])=>['r_student','r_teacher','r_personnel','r_guardian','r_class','r_classguardian'].includes(k)&&/^\d+$/.test(v))
           .map(([k,v])=>k+'='+v);
+        // Preserve independently verifiable recipient ids in Wilma's own
+        // hidden fields, even if Wilma has removed the URL query.
+        for(const field of recipients.inputs||[]){
+          const key=String(field.name||'');
+          const value=String(field.value||'');
+          if(['r_student','r_teacher','r_personnel','r_guardian','r_class','r_classguardian'].includes(key)&&/^\d+$/.test(value)){
+            recipientQuery.push(key+'='+value);
+          }
+          if(/^r_(?:student|teacher|personnel|guardian|class|classguardian)=\d+$/.test(value)){
+            recipientQuery.push(value);
+          }
+        }
+        const normalizedRecipientQuery=[...new Set(recipientQuery)];
         // When Wilma strips query arguments after selection, infer only uniquely
         // identified whole-class chips; never infer individual people.
-        if(!recipientQuery.length){
+        if(!normalizedRecipientQuery.length){
           const labels=new Set([...(recipients.visualItems||[])].flatMap(x=>[x.title,x.text]).map(x=>String(x||'').trim()).filter(Boolean));
           for(const disclosure of document.querySelectorAll('a.disclosure[href^="#collapse-school-classes-"]')){
             const id=(disclosure.getAttribute('href')||'').match(/^#collapse-school-classes-(\d+)-/);
             const name=disclosure.textContent.trim();
             if(!id||!name)continue;
-            if(labels.has(name))recipientQuery.push('r_class='+id[1]);
-            if(labels.has(name+':n huoltajat'))recipientQuery.push('r_classguardian='+id[1]);
+            if(labels.has(name))normalizedRecipientQuery.push('r_class='+id[1]);
+            if(labels.has(name+':n huoltajat'))normalizedRecipientQuery.push('r_classguardian='+id[1]);
           }
         }
 
@@ -633,7 +646,7 @@
             subject: subject ? subject.value || '' : '',
             bodyHtml,
             recipients,
-            recipientQuery:recipientQuery.map(x=>x.replace(/^[?&]/,''))
+            recipientQuery:normalizedRecipientQuery.map(x=>x.replace(/^[?&]/,''))
         };
     }
 
@@ -1016,7 +1029,9 @@
         localStorage.removeItem(REQUEST_KEY);
         if(request.subject||request.body||request.bodyHtml){
           const current=collectDraft();
-          if(!isMeaningfulDraft(current)){
+          // Native recipient parameters can populate recipient chips before the
+          // requested text is applied; check the editor, not recipient chips.
+          if(!String(current.subject||'').trim()&&!stripHtml(current.bodyHtml||'').trim()){
             const safe=document.createElement('div');safe.textContent=String(request.body||'');
             const body=String(request.body||'');
             const html=body?safe.innerHTML.replace(/\r?\n/g,'<br>'):String(request.bodyHtml||'');
