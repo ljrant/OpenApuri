@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.5.2
+// @version      0.5.3
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -324,29 +324,40 @@ async function guardianRecipients(students){
 }
 async function composeForSelection(courseRows,kinds,button,options={}){
  if(!courseRows.length){say('Valitse vähintään yksi opintojakso.',true);return}
- if(!kinds.students&&!kinds.teachers&&!kinds.guardians){say('Valitse vastaanottajaryhmä.',true);return}
+ if(!options.draftRecipients&&!kinds.students&&!kinds.teachers&&!kinds.guardians){say('Valitse vastaanottajaryhmä.',true);return}
  const students=uniquePeople(courseRows.map(r=>r.person)),teachers=uniquePeople(courseRows.flatMap(r=>r.teachers));
  const url=new URL('/messages/compose',location.origin);
- const tab=kinds.guardians?window.open('about:blank','_blank'):null;
- if(kinds.guardians&&!tab){say('Selain esti uuden viesti-ikkunan.',true);return}
- if(kinds.students)students.forEach(p=>url.searchParams.append('r_student',String(p.id)));
- if(kinds.teachers)teachers.forEach(p=>url.searchParams.append('r_teacher',String(p.id)));
+ const useDraft=Boolean(options.draftRecipients);
+ const tab=!useDraft&&kinds.guardians?window.open('about:blank','_blank'):null;
+ if(!useDraft&&kinds.guardians&&!tab){say('Selain esti uuden viesti-ikkunan.',true);return}
+ if(useDraft){
+   for(const pair of options.draftRecipients.recipientQuery||[]){
+     const [key,value]=String(pair).split('=');
+     if(['r_student','r_teacher','r_personnel','r_guardian','r_class','r_classguardian'].includes(key)&&/^\d+$/.test(value||''))url.searchParams.append(key,value);
+   }
+ }else{
+   if(kinds.students)students.forEach(p=>url.searchParams.append('r_student',String(p.id)));
+   if(kinds.teachers)teachers.forEach(p=>url.searchParams.append('r_teacher',String(p.id)));
+ }
  const missing=[];
- if(kinds.teachers&&!teachers.length)missing.push('Opettajien tunnisteita ei löytynyt');
- if(kinds.guardians){
+ if(!useDraft&&kinds.teachers&&!teachers.length)missing.push('Opettajien tunnisteita ei löytynyt');
+ if(!useDraft&&kinds.guardians){
    button.disabled=true;say('Haetaan huoltajien vastaanottajatietoja…');
    try{const g=await guardianRecipients(students);g.ids.forEach(id=>url.searchParams.append('r_guardian',id));missing.push(...g.missing.map(name=>'Huoltaja ei löytynyt: '+name))}
    catch(e){missing.push('Huoltajien haku epäonnistui')}
    finally{button.disabled=false}
  }
- if(!url.search){tab?.close();say('Vastaanottajia ei löytynyt. '+missing.join('; '),true);return}
+ const savedSnapshot=useDraft&&!url.search?options.draftRecipients.recipients:null;
+ if(!url.search&&!savedSnapshot&&!useDraft){tab?.close();say('Vastaanottajia ei löytynyt. '+missing.join('; '),true);return}
+ if(useDraft&&!url.search&&!savedSnapshot)missing.push('Luonnoksessa ei ollut palautettavia vastaanottajatunnisteita');
  const names=options.addNames?'Valitut opiskelijat:\n'+students.map(p=>p.name).join('\n'):'';
  const body=[String(options.body||''),names].filter(Boolean).join('\n\n');
  const transfer={
    createdAt:Date.now(),subject:String(options.subject||''),body,
    bodyHtml:options.bodyHtml||'',
    missingRecipients:missing,
-   recipientQuery:[...url.searchParams].map(([key,val])=>key+'='+val)
+   recipientQuery:[...url.searchParams].map(([key,val])=>key+'='+val),
+   savedRecipients:savedSnapshot
  };
  localStorage.setItem('wilmatools.composeRequest.v1',JSON.stringify(transfer));
  if(tab){try{tab.opener=null;tab.location.replace(url.href)}catch(e){tab.close();say('Viestin avaus epäonnistui.',true);return}}
@@ -378,25 +389,32 @@ recipientPanel.append(namesLabel);
 const templateSelect=make('select');templateSelect.style.cssText='width:100%;padding:7px;margin:6px 0';
 const titleInput=make('input');titleInput.placeholder='Viestin otsikko';titleInput.style.margin='5px 0';
 const messageBody=make('textarea');messageBody.rows=4;messageBody.placeholder='Viestin sisältö';messageBody.style.cssText='width:100%;min-height:72px;margin:5px 0';
-let templateHtml='',templateText='';
+let templateHtml='',templateText='',activeDraft=null;
 const getSaved=(key)=>{try{const data=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(data)?data:[]}catch{return []}};
 let templates=[];
 function reloadTemplates(){
  templates=[
- ...getSaved('wilmatools.messageTemplates.v1').filter(t=>t?.title).map(t=>({name:'Pohja: '+t.title,subject:t.subject||'',body:t.body||'',html:t.bodyHtml||''})),
- ...getSaved('wilmatools.draftHistory.v1').filter(t=>t?.subject).map(t=>({name:'Luonnos: '+t.subject,subject:t.subject||'',body:t.bodyHtml||'',html:t.bodyHtml||''}))];
+ ...getSaved('wilmatools.messageTemplates.v1').filter(t=>t?.title).map(t=>({kind:'template',name:'Pohja: '+t.title,subject:t.subject||'',body:t.body||'',html:t.bodyHtml||''})),
+ ...getSaved('wilmatools.draftHistory.v1').filter(t=>t?.subject).map(t=>({kind:'draft',name:'Luonnos: '+t.subject,subject:t.subject||'',body:t.bodyHtml||'',html:t.bodyHtml||'',recipientQuery:t.recipientQuery||[],recipients:t.recipients||null}))];
  templateSelect.replaceChildren();const first=make('option','','Valitse viestipohja tai tallennettu luonnos');first.value='';templateSelect.append(first);
  templates.forEach((t,i)=>{const el=make('option','',t.name);el.value=String(i);templateSelect.append(el)});
 }
 reloadTemplates();
 templateSelect.onchange=()=>{
- if(templateSelect.value==='')return;
+ activeDraft=null;
+ if(templateSelect.value===''){draftRecipientsCheckbox.checked=false;draftRecipientsLabel.hidden=true;return}
  const t=templates[Number(templateSelect.value)];if(!t)return;
+ activeDraft=t.kind==='draft'?t:null;
+ draftRecipientsCheckbox.checked=Boolean(activeDraft);draftRecipientsLabel.hidden=!activeDraft;
  titleInput.value=t.subject;const safe=make('div');safe.innerHTML=t.html||t.body;templateText=safe.textContent||t.body;
  messageBody.value=templateText;templateHtml=t.html;
 };
-const refreshTemplates=make('button','','Päivitä tallennetut pohjat');refreshTemplates.onclick=reloadTemplates;
-recipientPanel.append(make('strong','','Viestipohjat ja tallennetut luonnokset'),templateSelect,refreshTemplates,titleInput,messageBody);
+const draftRecipientsLabel=make('label');draftRecipientsLabel.hidden=true;
+ draftRecipientsLabel.style.cssText='display:flex;flex-direction:row;gap:8px;align-items:center;margin:7px 0';
+ const draftRecipientsCheckbox=make('input');draftRecipientsCheckbox.type='checkbox';draftRecipientsCheckbox.style.width='auto';
+ draftRecipientsLabel.append(draftRecipientsCheckbox,make('span','','Käytä valitun luonnoksen vastaanottajia (korvaa valitut opiskelijat/opettajat)'));
+ const refreshTemplates=make('button','','Päivitä tallennetut pohjat');refreshTemplates.onclick=reloadTemplates;
+recipientPanel.append(make('strong','','Viestipohjat ja tallennetut luonnokset'),templateSelect,refreshTemplates,draftRecipientsLabel,titleInput,messageBody);
 const openMessage=make('button','oh-action','Avaa viesti Wilmassa');
 openMessage.style.display='block';
 recipientPanel.append(openMessage,make('p','oh-help','Valitse yksi tai useampi vastaanottajaryhmä. Viestiä ei lähetetä automaattisesti. Tarkista vastaanottajat Wilmassa.'));
@@ -433,7 +451,7 @@ row.append(teacherCell,lessonCell);body.append(row);
 results.append(make('p','oh-help','Opintojakso näkyy opiskelijaa kohden vain kerran. Ryhmämerkintöjä ei esitetä opintojakson niminä. Ajanjakson reunaviikot voivat sisältää myös sen ulkopuolisia opetuspäiviä.'));
 const chosen=()=>[...selected].map(i=>rows[i]).filter(Boolean);
 openMessage.onclick=()=>composeForSelection(chosen(),{students:kinds.students.checked,teachers:kinds.teachers.checked,guardians:kinds.guardians.checked},openMessage,
-{addNames:addNames.checked,subject:titleInput.value,body:messageBody.value,bodyHtml:templateHtml&&messageBody.value===templateText?templateHtml:''});
+{addNames:addNames.checked,subject:titleInput.value,body:messageBody.value,bodyHtml:templateHtml&&messageBody.value===templateText?templateHtml:'',draftRecipients:activeDraft&&draftRecipientsCheckbox.checked?activeDraft:null});
 }
 
 renderPicked();renderChoices();
