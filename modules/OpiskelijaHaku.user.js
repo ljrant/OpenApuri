@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.4.4
+// @version      0.5.0
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -118,9 +118,19 @@ function blockMoment(block,week){
 const source=[block.querySelector('h3.sr-only')?.textContent,block.getAttribute('data-original-title'),block.getAttribute('title')].filter(Boolean).join(' ');
 const dateMatch=source.match(/\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b/);
 let date=null;
-if(dateMatch){const d=new Date(+dateMatch[3],+dateMatch[2]-1,+dateMatch[1],12);if(d.getFullYear()===+dateMatch[3]&&d.getMonth()===+dateMatch[2]-1&&d.getDate()===+dateMatch[1])date=d}
-const times=[...source.matchAll(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/g)].map(m=>+m[1]*60+(+m[2]));
-return {date,time:times.length>=2?{start:times[0],end:times[1]}:null};
+function day(d,m,y){const x=new Date(y,m-1,d,12);return x.getDate()===d&&x.getMonth()===m-1&&x.getFullYear()===y?x:null}
+if(dateMatch)date=day(+dateMatch[1],+dateMatch[2],+dateMatch[3]);
+if(!date){const partial=source.match(/\b(\d{1,2})\.(\d{1,2})\.(?!\d)/);if(partial)for(const y of [week.getFullYear()-1,week.getFullYear(),week.getFullYear()+1]){const x=day(+partial[1],+partial[2],y);if(x&&Math.abs(x-week)<7*86400000){date=x;break}}}
+if(!date){const days=['maanantai','tiistai','keskiviikko','torstai','perjantai','lauantai','sunnuntai'];const found=days.flatMap((x,i)=>new RegExp('(?:^|[\\s,;])'+x+'(?=\\s|[,:;.]|$)','i').test(source)?[i]:[]);if(found.length===1){date=new Date(week);date.setDate(date.getDate()+found[0])}}
+const scrubbed=source.replace(/\b\d{1,2}\.\d{1,2}\.\d{4}\b/g,' ').replace(/\b\d{1,2}\.\d{1,2}\.(?!\d)/g,' ');
+const ranges=[...scrubbed.matchAll(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/g)];
+let time=ranges.length===2?{start:+ranges[0][1]*60+(+ranges[0][2]),end:+ranges[1][1]*60+(+ranges[1][2])}:null;
+if(time&&time.end<=time.start)time=null;
+return {date,time};
+}
+function lessonLabel(l){
+const day=l.date?fi(new Date(l.date+'T12:00:00')):'Viikko '+l.week+' (päivä tuntematon)';
+return day+(l.time?' '+pad(Math.floor(l.time.start/60))+':'+pad(l.time.start%60)+'–'+pad(Math.floor(l.time.end/60))+':'+pad(l.time.end%60):' (kellonaika tuntematon)');
 }
 function parseSchedule(html,person,week,from,to,clockRange){
 const doc=typeof html==='string'?new DOMParser().parseFromString(html,'text/html'):html;
@@ -148,7 +158,7 @@ if(!moment.time){parseSchedule.unknownTimes=(parseSchedule.unknownTimes||0)+1;ig
 if(moment.time.end<=clockRange.start||moment.time.start>=clockRange.end){ignoredByTime++;continue}
 }
 const teachers=new Map();for(const a of $$('a.teachers[href]',block)){let u;try{u=new URL(a.href,location.href)}catch{continue}const m=teacherRe.exec(u.pathname);if(!m||u.origin!==location.origin)continue;teachers.set(m[1],{id:m[1],name:clean(a.getAttribute('title')||a.textContent)})}
-out.push({person,course,group,teachers:[...teachers.values()],week:iso(week),partial:!moment.date&&(week<from||new Date(week.getTime()+6*86400000)>to)});
+out.push({person,course,group,teachers:[...teachers.values()],week:iso(week),lesson:{date:moment.date?iso(moment.date):null,time:moment.time,week:iso(week)},partial:!moment.date&&(week<from||new Date(week.getTime()+6*86400000)>to)});
 }
 if(blocks.length&&foundCourses===0)throw Error('Työjärjestysmerkintöjä löytyi, mutta opintojaksotietoa ei tunnistettu.');
 // Genuine empty results are possible after applying date/time filters.
@@ -226,10 +236,12 @@ const failed=output.filter(x=>x?.error);
 const errors=failed.length,combined=new Map();
 const totalBlocks=output.reduce((n,o)=>n+(o?.stats?.blocks||0),0);
 const totalCourses=output.reduce((n,o)=>n+(o?.stats?.courses||0),0);
-for(const o of output){if(!o?.rows)continue;for(const x of o.rows){const key=x.person.id+'|'+norm(x.course);if(!combined.has(key))combined.set(key,{...x,teachers:[],teacherIds:new Set(),groups:new Set(),weeks:new Set(),partial:false});
+for(const o of output){if(!o?.rows)continue;for(const x of o.rows){const key=x.person.id+'|'+norm(x.course);if(!combined.has(key))combined.set(key,{...x,teachers:[],teacherIds:new Set(),groups:new Set(),weeks:new Set(),lessons:new Map(),partial:false});
 const item=combined.get(key);item.weeks.add(x.week);item.partial ||=x.partial;
 if(x.group)item.groups.add(x.group);
-for(const t of x.teachers)if(!item.teacherIds.has(t.id)){item.teacherIds.add(t.id);item.teachers.push(t)}}}
+for(const t of x.teachers)if(!item.teacherIds.has(t.id)){item.teacherIds.add(t.id);item.teachers.push(t)}
+const l=x.lesson;if(l){const key=(l.date||'week:'+l.week)+'|'+(l.time?l.time.start+'-'+l.time.end:'?')+'|'+norm(x.group);if(!item.lessons.has(key))item.lessons.set(key,l)}
+}}
 rows=[...combined.values()].sort((a,b)=>a.person.name.localeCompare(b.person.name,'fi')||a.course.localeCompare(b.course,'fi'));
 renderResults();
 const firstError=failed[0]?.error||'';
@@ -325,7 +337,7 @@ for(const {person,items} of byStudent.values()){
   heading.style.cssText='font-size:16px;margin:12px 0 5px;font-weight:600';
   section.append(heading);
   const table=make('table'),thead=make('thead'),tr=make('tr');
-  ['','Opintojakso','Opettaja(t)'].forEach(x=>tr.append(make('th','',x)));
+  ['','Opintojakso','Opettaja(t)','Oppituntien ajankohdat'].forEach(x=>tr.append(make('th','',x)));
   thead.append(tr);table.append(thead);
   const body=make('tbody');
   for(const {r,i} of items){
@@ -337,7 +349,11 @@ for(const {person,items} of byStudent.values()){
     else for(const teacher of r.teachers){
       const a=make('a','',teacher.name);a.href='/profiles/teachers/'+teacher.id;a.target='_blank';a.rel='noopener';teacherCell.append(a,document.createTextNode(' '));
     }
-    row.append(teacherCell);body.append(row);
+    const lessonCell=make('td');
+const lessons=[...(r.lessons?.values()||[])].sort((a,b)=>(a.date||a.week).localeCompare(b.date||b.week)||(a.time?.start??-1)-(b.time?.start??-1));
+lessons.forEach((l,j)=>{if(j)lessonCell.append(document.createTextNode(' · '));lessonCell.append(make('span','',lessonLabel(l)))});
+if(!lessons.length)lessonCell.textContent='Ajankohta ei tiedossa';
+row.append(teacherCell,lessonCell);body.append(row);
   }
   table.append(body);section.append(table);results.append(section);
 }
