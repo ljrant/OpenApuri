@@ -12,7 +12,7 @@ Asenna Tampermonkey ja haluamasi skriptit. Tietokoneella sivupaneeli ja varsinai
 | --- | --- | --- |
 | WilmaTools-sivupaneeli (tietokone) | 0.20.2 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/desktop-toolbar.user.js) |
 | Ryhmänohjaajan opintoseuranta | 0.20.2 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/WilmaTools.user.js) |
-| OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.4.4 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) |
+| OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.5.1 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) |
 | Viestiluonnosten tallennus – Chrome tietokoneella | 0.12.4 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/message-autosaver-chrome-desktop.user.js) |
 | Viestiluonnosten tallennus – Firefox Androidissa (kokeellinen) | 0.6.0 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/message-autosaver-firefox-android.user.js) |
 
@@ -54,7 +54,7 @@ Chrome-tietokoneversion automaattitallennin säilyttää viestin aiheen, sisäll
 Firefox Android -versio on **kokeellinen**, toimii vain Androidin Firefox-selaimessa ja tarvitsee yhteensopivan käyttäjäskriptilaajennuksen. Katso [erilliset ohjeet](https://ljrant.github.io/WilmaTools/firefox-android.html).
 
 
-## OpiskelijaHaku (v0.4.4)
+## OpiskelijaHaku (v0.5.1)
 
 OpiskelijaHaku-välilehti näkyy myös opiskelijakohtaisilla `/profiles/students/...`-alisivuilla: alisivulta se avaa opiskelijaluettelon OpiskelijaHaku-välilehden. Haku itsessään sijaitsee edelleen luettelon pääsivulla.
 
@@ -189,3 +189,8 @@ Yhtenäisessä Viestikirjastossa ovat nyt vain **Viestipohjat**- ja **Luonnokset
 ### Viestipohjan muokkaus ja luonnosvälilehden nimi (v0.16.8)
 
 Viestipohjan voi valita hakua ja kategoriasuodatinta käyttävällä valikolla ja avata sen muokattavaksi **Muokkaa valittua** -toiminnolla. Muokkaus avaa saman viestipohjaeditorin, jossa voi muuttaa nimeä, kategorioita, aihetta, muotoiltua sisältöä, vastaanottajavalintoja ja muita asetuksia. **Luonnokset**-välilehden uusi nimi on **Tallennetut luonnokset**. Viestikirjaston välilehdet säilyvät näkyvissä muokkausnäkymässä.
+
+
+### OpiskelijaHaku v0.5.1 ja viestien vastaanottajat
+
+Opiskelijakohtainen opintojaksolista näyttää tunnistettavat oppitunnin päivämäärät ja kellonajat. Puuttuvat ajankohdat merkitään erikseen eikä niitä arvata. Valitse viestin vastaanottajat -näkymässä voidaan yhdistää opiskelijoita, opettajia ja huoltajia, lisätä valittujen opiskelijoiden nimet viestiin sekä käyttää samassa selaimessa tallennettuja Viestikirjaston pohjia ja luonnoksia. Jos huoltaja puuttuu, viesti avataan muille tunnistetuille vastaanottajille ja viestisivulla näytetään huomautus. Huoltajien tunnisteita ei arvata opiskelijatunnuksista. Viestikirjasto/viestiluonnokset v0.16.13 säilyttää tunnistetut suorat `r_student`-, `r_teacher`-, `r_guardian`- sekä ryhmäparametrit luonnoksen palautusta varten. Viestin vastaanottajat tulee aina tarkistaa Wilmassa ennen lähettämistä.
