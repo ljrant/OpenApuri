@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.4.3
+// @version      0.4.4
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -268,6 +268,9 @@ async function composeForSelection(courseRows,kinds,button){
   const teachers=uniquePeople(courseRows.flatMap(r=>r.teachers));
   if(kinds.teachers&&!teachers.length){say('Valituilla opintojaksoilla ei ole opettajatunnisteita. Viestiä ei avattu.',true);return}
   const url=new URL('/messages/compose',location.origin);
+  // Reserve a tab synchronously so popup blockers do not discard guardian searches.
+  const messageWindow=kinds.guardians?window.open('about:blank','_blank'):null;
+  if(kinds.guardians&&!messageWindow){say('Selain esti uuden välilehden. Salli ponnahdusikkunat Wilmalle ja kokeile uudelleen.',true);return}
   if(kinds.students)for(const p of students)url.searchParams.append('r_student',String(p.id));
   if(kinds.teachers)for(const p of teachers)url.searchParams.append('r_teacher',String(p.id));
   if(kinds.guardians){
@@ -276,16 +279,19 @@ async function composeForSelection(courseRows,kinds,button){
     try{
       const guardians=await guardianRecipients(students);
       if(guardians.missing.length){
-        say('Huoltajien vastaanottajatunnuksia ei löytynyt seuraaville opiskelijoille: '+guardians.missing.join(', ')+'. Viestiä ei avattu, jotta vastaanottajia ei jää vahingossa pois.',true);
+        messageWindow?.close();say('Huoltajien vastaanottajatunnuksia ei löytynyt seuraaville opiskelijoille: '+guardians.missing.join(', ')+'. Viestiä ei avattu, jotta vastaanottajia ei jää vahingossa pois.',true);
         return;
       }
-      if(!guardians.ids.length){say('Huoltajien viestilinkkejä ei löytynyt. Viestiä ei avattu.',true);return}
+      if(!guardians.ids.length){messageWindow?.close();say('Huoltajien viestilinkkejä ei löytynyt. Viestiä ei avattu.',true);return}
       guardians.ids.forEach(id=>url.searchParams.append('r_guardian',id));
-    }catch(e){say('Huoltajien tunnistaminen epäonnistui: '+e.message,true);return}
+    }catch(e){messageWindow?.close();say('Huoltajien tunnistaminen epäonnistui: '+e.message,true);return}
     finally{button.disabled=false}
   }
   if(!url.search){say('Vastaanottajia ei löytynyt.',true);return}
-  const opened=window.open(url.href,'_blank','noopener');
+  if(messageWindow){
+    try{messageWindow.opener=null;messageWindow.location.replace(url.href)}
+    catch(e){messageWindow.close();say('Viestisivun avaaminen epäonnistui.',true);return}
+  }else window.open(url.href,'_blank','noopener');
   say('Wilman viestinkirjoitus avattu. Tarkista, että kaikki opiskelijat, opettajat ja huoltajat näkyvät vastaanottajina ennen lähettämistä.');
 }
 function renderResults(){
