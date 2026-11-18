@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WilmaTools - Message Autosaver (Chrome Desktop)
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.16.12
+// @version      0.16.13
 // @description  Chrome desktop local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
@@ -610,7 +610,9 @@
         const subject = $(SEL.subject);
         const bodyHtml = getBodyHtml();
         const recipients = getRecipientsSnapshot();
-        const recipientQuery=location.search.match(/(?:^|[?&])r_class(?:guardian)?=\d+/g)||[];
+        const recipientQuery=[...new URLSearchParams(location.search)]
+          .filter(([k,v])=>['r_student','r_teacher','r_personnel','r_guardian','r_class','r_classguardian'].includes(k)&&/^\d+$/.test(v))
+          .map(([k,v])=>k+'='+v);
         // When Wilma strips query arguments after selection, infer only uniquely
         // identified whole-class chips; never infer individual people.
         if(!recipientQuery.length){
@@ -651,9 +653,9 @@
     function historySave(draft){
       const history=listHistory();
       const stamp=Date.now();
-      const signature=JSON.stringify([draft.subject,draft.bodyHtml]);
+      const signature=JSON.stringify([draft.subject,draft.bodyHtml,draft.recipientQuery,draft.recipients?.inputs,draft.recipients?.text]);
       const newest=history[0];
-      if(newest&&JSON.stringify([newest.subject,newest.bodyHtml])===signature)return;
+      if(newest&&newest.signature===signature)return;
       // Keep one current entry for the active message and retain older message
       // subjects as separate entries; previous draft versions remain in the
       // main autosave slot until explicitly replaced.
@@ -847,8 +849,14 @@
       if(!withRecipients)return;
       if(Array.isArray(item.recipientQuery)&&item.recipientQuery.length){
         const params=new URLSearchParams();
-        for(const pair of item.recipientQuery){const [k,v]=pair.split('=');if(['r_class','r_classguardian'].includes(k)&&/^\d+$/.test(v||''))params.set(k,v)}
+        for(const pair of item.recipientQuery){const [k,v]=pair.split('=');if(['r_student','r_teacher','r_personnel','r_guardian','r_class','r_classguardian'].includes(k)&&/^\d+$/.test(v||''))params.append(k,v)}
         if([...params].length){
+          // Preserve exact native Wilma recipient parameters, including multiples.
+          // Do not reload endlessly if this compose page already has those recipients.
+          const current=new URLSearchParams(location.search);
+          const currentValues=[...current].filter(([k,v])=>['r_student','r_teacher','r_personnel','r_guardian','r_class','r_classguardian'].includes(k)&&/^\d+$/.test(v));
+          const wanted=[...params];
+          if(JSON.stringify(currentValues.sort())===JSON.stringify(wanted.sort()))return;
           // Carry the content over the navigation so Wilma can add recipients natively.
           localStorage.setItem('wilmatools.draftRestore.v1',JSON.stringify({subject:item.subject||'',bodyHtml:item.bodyHtml||item.body||'',createdAt:Date.now()}));
           location.assign('/messages/compose?'+params.toString());return;
@@ -1006,12 +1014,25 @@
       const request=safeRead(REQUEST_KEY,null);
       if(request&&Date.now()-request.createdAt<120000){
         localStorage.removeItem(REQUEST_KEY);
-        if(request.subject||request.body){
+        if(request.subject||request.body||request.bodyHtml){
           const current=collectDraft();
           if(!isMeaningfulDraft(current)){
             const safe=document.createElement('div');safe.textContent=String(request.body||'');
-            applySaved({subject:String(request.subject||''),bodyHtml:safe.innerHTML.replaceAll('\\n','<br>')},false);
+            const body=String(request.body||'');
+            const html=body?safe.innerHTML.replace(/\r?\n/g,'<br>'):String(request.bodyHtml||'');
+            applySaved({subject:String(request.subject||''),bodyHtml:html},false);
           }
+        }
+        if(Array.isArray(request.missingRecipients)&&request.missingRecipients.length){
+          const note=document.createElement('aside');
+          note.id='wt-missing-recipients';
+          note.style.cssText='padding:9px 12px;margin:12px 0;border-left:3px solid #ae792e;background:#fff9ee;color:#543c18;font:13px/1.45 system-ui';
+          const strong=document.createElement('strong');strong.textContent='Huomautus vastaanottajista';
+          const p=document.createElement('p');p.style.margin='4px 0 0';
+          p.textContent='Seuraavia vastaanottajia ei voitu lisätä: '+request.missingRecipients.join('; ')+'. Voit täydentää ne käsin. Tarkista vastaanottajat ennen lähettämistä.';
+          note.append(strong,p);
+          const cell=$(SEL.recipientsCell);
+          (cell?.parentElement||document.querySelector('main#main-content')||document.body).prepend(note);
         }
         const task=request.recipientClassId
           ?selectClassRecipients(request.recipientClassId,request.recipientType)
@@ -1046,13 +1067,13 @@
 
             const json = JSON.stringify(draft);
 
-            if (JSON.stringify([draft.subject,draft.bodyHtml,draft.recipients?.text,draft.recipientQuery])===lastSavedJson) {
+            if (JSON.stringify([draft.subject,draft.bodyHtml,draft.recipients,draft.recipientQuery])===lastSavedJson) {
                 return;
             }
 
             localStorage.setItem(STORAGE_KEY, json);
             historySave(draft);
-            lastSavedJson = JSON.stringify([draft.subject,draft.bodyHtml,draft.recipients?.text,draft.recipientQuery]);
+            lastSavedJson = JSON.stringify([draft.subject,draft.bodyHtml,draft.recipients,draft.recipientQuery]);
 
             const bodyLen = stripHtml(draft.bodyHtml).trim().length;
             const recCount = draft.recipients.inputs.length;
@@ -1093,7 +1114,7 @@
             if (!ok) return;
         }
 
-        applySaved(draft,false);
+        applySaved(draft,true);
         const bodyLen=stripHtml(draft.bodyHtml||'').trim().length;
         setIndicator('Wilma Autosaver: restored draft | body '+bodyLen+' chars','ok');
         updateInfo();
