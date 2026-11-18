@@ -12,7 +12,7 @@ Asenna Tampermonkey ja haluamasi skriptit. Tietokoneella sivupaneeli ja varsinai
 | --- | --- | --- |
 | WilmaTools-sivupaneeli (tietokone) | 0.20.2 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/desktop-toolbar.user.js) |
 | Ryhmänohjaajan opintoseuranta | 0.20.2 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/WilmaTools.user.js) |
-| OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.6.6 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) |
+| OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.6.7 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) |
 | Viestiluonnosten tallennus – Chrome tietokoneella | 0.12.4 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/message-autosaver-chrome-desktop.user.js) |
 | Viestiluonnosten tallennus – Firefox Androidissa (kokeellinen) | 0.6.0 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/message-autosaver-firefox-android.user.js) |
 
@@ -54,7 +54,7 @@ Chrome-tietokoneversion automaattitallennin säilyttää viestin aiheen, sisäll
 Firefox Android -versio on **kokeellinen**, toimii vain Androidin Firefox-selaimessa ja tarvitsee yhteensopivan käyttäjäskriptilaajennuksen. Katso [erilliset ohjeet](https://ljrant.github.io/WilmaTools/firefox-android.html).
 
 
-## OpiskelijaHaku (v0.6.6)
+## OpiskelijaHaku (v0.6.7)
 
 OpiskelijaHaku-välilehti näkyy myös opiskelijakohtaisilla `/profiles/students/...`-alisivuilla: alisivulta se avaa opiskelijaluettelon OpiskelijaHaku-välilehden. Haku itsessään sijaitsee edelleen luettelon pääsivulla.
 
@@ -216,3 +216,8 @@ Opiskelija- ja opettajahaku on oletusnäkymä sivulla `/profiles/students` ja to
 ### Vastaanottajavalinta: valittujen opintojaksojen opiskelijat (v0.6.4)
 
 OpiskelijaHaussa on yksi yhteinen opiskelijoiden ja opettajien nimihakukenttä, ja etusivulle haku sijoitetaan muiden dashboard-korttien rinnalle. Viestin vastaanottajavalikkoon on lisätty **Valittujen opintojaksojen opiskelijat**. Opiskelijatyöjärjestyksestä valitun opintojakson opiskelija lisätään vain hänen oman työjärjestyksensä perusteella. Opettajan työjärjestyksen opintojakson opiskelijat yritetään löytää vain Wilman opintojaksoon suoraan liittyvästä ryhmän opiskelijaluettelolinkistä; jos jäsenluetteloa ei voi tunnistaa, opiskelijoita ei arvata ja virheestä näytetään huomautus. Toiminnon oikeellisuus riippuu Wilman todellisen ryhmälinkkirakenteen käyttöoikeuksista, joten tarkista vastaanottajat viestisivulla.
+
+
+### OpiskelijaHaku v0.6.7 – tuloslistan hyperlinkit
+
+Opiskelijoiden ja henkilökunnan nimet toimivat linkkeinä heidän Wilma-profiileihinsa. Opintojakson nimi linkitetään vain työjärjestyksestä varmistettuun ryhmäsivun osoitteeseen; jos tällaista linkkiä ei löydy, nimi jätetään tavalliseksi tekstiksi. Mikäli samalla opintojaksolla on useita ryhmäsivuja, ne näytetään erillisinä ryhmälinkkeinä. Linkit avataan uudessa välilehdessä.
