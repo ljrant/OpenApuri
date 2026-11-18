@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.2.0
+// @version      0.2.1
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -26,7 +26,7 @@ const li=make('li');li.id='oh-tab';const link=make('a','', 'OpiskelijaHaku');lin
 const panel=make('section');panel.id='oh-panel';panel.hidden=true;native.insertAdjacentElement('afterend',panel);
 let active=false,abort=null,rows=[],picked=new Map(),directory=new Map(),directoryLoading=false,directoryLoaded=false;
 function changeTab(enabled){active=enabled;panel.hidden=!enabled;native.style.display=enabled?'none':'';li.classList.toggle('active',enabled);link.setAttribute('aria-selected',String(enabled))}
-link.onclick=e=>{e.preventDefault();$('li.active',tabs).forEach(n=>n.classList.remove('active'));changeTab(true);if(!directoryLoaded&&!directoryLoading)readDirectory();else renderChoices()};
+link.onclick=e=>{e.preventDefault();$('li.active',tabs).forEach(n=>n.classList.remove('active'));changeTab(true);renderChoices()};
 tabs.addEventListener('click',e=>{if(!e.target.closest('#oh-tab')&&e.target.closest('a'))changeTab(false)});
 panel.append(make('h2','','OpiskelijaHaku'),make('p','oh-help','Suodata Wilman opiskelijaluetteloa nimellä ja valitse opiskelijat napsauttamalla. Voit valita useita opiskelijoita.'));
 const chooser=make('div','oh-chooser'),chooserLabel=make('label'),filter=make('input');
@@ -50,7 +50,7 @@ function renderChoices(){
 choices.replaceChildren();
 const q=norm(filter.value);
 const matches=[...directory.values()].filter(p=>norm(p.name).includes(q)).sort((a,b)=>a.name.localeCompare(b.name,'fi'));
-const visible=matches.slice(0,160);
+const visible=matches.slice(0,80);
 if(!visible.length){choices.append(make('div','oh-help',directoryLoading?'Opiskelijoita ladataan…':'Ei osumia.'));return}
 const fragment=document.createDocumentFragment();
 for(const person of visible){
@@ -60,9 +60,9 @@ b.onclick=()=>{if(picked.has(person.id))picked.delete(person.id);else if(picked.
 fragment.append(b);
 }
 choices.append(fragment);
-directoryStatus.textContent=(directoryLoading?'Ladataan: ':'Luettelossa: ')+directory.size+' opiskelijaa · osumia '+matches.length+(matches.length>visible.length?' (näytetään 160 ensimmäistä)':'');
+directoryStatus.textContent=(directoryLoading?'Ladataan: ':'Luettelossa: ')+directory.size+' opiskelijaa · osumia '+matches.length+(matches.length>visible.length?' (näytetään 80 ensimmäistä)':'');
 }
-filter.addEventListener('input',renderChoices);
+filter.addEventListener('input',()=>{renderChoices();if(!directoryLoaded&&!directoryLoading)readDirectory()});
 async function readDirectory(){
 if(directoryLoading)return;
 directoryLoading=true;refresh.disabled=true;renderChoices();say('Ladataan Wilman opiskelijaluetteloa…');
@@ -78,7 +78,7 @@ let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}
 if(u.origin===location.origin&&/^\/profiles\/students\/[^/]+\/?$/.test(u.pathname)&&!studentRe.test(u.pathname))urls.set(u.href,u);
 }
 const queue=[...urls.values()].slice(0,38);let at=0,finished=0,failed=0;
-async function worker(){while(at<queue.length){const u=queue[at++];try{const r=await fetch(u.href,{credentials:'same-origin'});if(!r.ok)throw Error('HTTP '+r.status);readNames(new DOMParser().parseFromString(await r.text(),'text/html'))}catch(e){failed++;console.warn('[OpiskelijaHaku] Opiskelijaluetteloa ei saatu:',e)}finished++;renderChoices();directoryStatus.textContent='Luettelot '+finished+'/'+queue.length+' · opiskelijoita '+directory.size}}
+async function worker(){while(at<queue.length){const u=queue[at++];try{const r=await fetch(u.href,{credentials:'same-origin'});if(!r.ok)throw Error('HTTP '+r.status);readNames(new DOMParser().parseFromString(await r.text(),'text/html'))}catch(e){failed++;console.warn('[OpiskelijaHaku] Opiskelijaluetteloa ei saatu:',e)}finished++;directoryStatus.textContent='Luettelot '+finished+'/'+queue.length+' · opiskelijoita '+directory.size;if(finished%4===0)renderChoices()}}
 await Promise.all(Array.from({length:Math.min(4,queue.length)},worker));
 directoryLoaded=true;renderChoices();say('Opiskelijaluettelo ladattu: '+directory.size+' opiskelijaa.'+(failed?' '+failed+' sivua ei voitu hakea.':''));
 }catch(e){say('Luettelon lataus epäonnistui: '+e.message,true)}
