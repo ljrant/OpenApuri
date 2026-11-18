@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.4.2
+// @version      0.4.3
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -236,20 +236,81 @@ const firstError=failed[0]?.error||'';
 say((signal.aborted?'Keskeytetty. ':'Valmis. ')+rows.length+' opintojaksoa, työjärjestysmerkintöjä '+totalBlocks+', tunnistettuja opintojaksoja '+totalCourses+', epäonnistuneita viikkohakuja '+errors+'.'+(firstError?' Esimerkkivirhe: '+firstError:'')+(parseSchedule.unknownTimes?' '+parseSchedule.unknownTimes+' merkintää ilman tunnistettavaa kellonaikaa.':''),errors>0||totalBlocks===0);
 }catch(e){say('Hakuvirhe: '+e.message,true)}finally{abort=null;search.disabled=false;cancel.disabled=true}
 };
-function compose(list,type){
-  const persons=[...new Map(list.map(p=>[String(p.id),p])).values()]
-    .filter(p=>/^\d+$/.test(String(p.id)));
-  if(!persons.length){say('Ei vastaanottajia.',true);return}
-  const param=type==='teachers'?'r_teacher':type==='students'?'r_student':null;
-  if(!param){say('Tuntematon vastaanottajatyyppi.',true);return}
+function uniquePeople(list){
+  return [...new Map(list.filter(p=>p&&/^\d+$/.test(String(p.id))).map(p=>[String(p.id),p])).values()];
+}
+async function guardianRecipients(students){
+  const confirmed=new Set(),missing=[];
+  // A guardian recipient is not the student's ID. Read Wilma's own
+  // message links; do not manufacture r_guardian parameters.
+  for(const p of uniquePeople(students)){
+    try{
+      const url=new URL('/profiles/students/'+encodeURIComponent(p.id),location.origin);
+      const response=await fetch(url.href,{credentials:'same-origin'});
+      if(!response.ok)throw Error('HTTP '+response.status);
+      const doc=new DOMParser().parseFromString(await response.text(),'text/html');
+      const ids=new Set();
+      for(const a of $$('a[href]',doc)){
+        let u;try{u=new URL(a.getAttribute('href'),location.origin)}catch{continue}
+        if(u.origin!==location.origin||u.pathname!=='/messages/compose')continue;
+        for(const id of u.searchParams.getAll('r_guardian'))if(/^\d+$/.test(id))ids.add(id);
+      }
+      if(!ids.size)missing.push(p.name);
+      for(const id of ids)confirmed.add(id);
+    }catch(e){missing.push(p.name)}
+  }
+  return {ids:[...confirmed],missing};
+}
+async function composeForSelection(courseRows,kinds,button){
+  if(!courseRows.length){say('Valitse vähintään yksi opintojaksorivi.',true);return}
+  if(!kinds.students&&!kinds.teachers&&!kinds.guardians){say('Valitse vähintään yksi vastaanottajaryhmä.',true);return}
+  const students=uniquePeople(courseRows.map(r=>r.person));
+  const teachers=uniquePeople(courseRows.flatMap(r=>r.teachers));
+  if(kinds.teachers&&!teachers.length){say('Valituilla opintojaksoilla ei ole opettajatunnisteita. Viestiä ei avattu.',true);return}
   const url=new URL('/messages/compose',location.origin);
-  persons.forEach(p=>url.searchParams.append(param,String(p.id)));
-  window.open(url.href,'_blank','noopener');
+  if(kinds.students)for(const p of students)url.searchParams.append('r_student',String(p.id));
+  if(kinds.teachers)for(const p of teachers)url.searchParams.append('r_teacher',String(p.id));
+  if(kinds.guardians){
+    button.disabled=true;
+    say('Varmistetaan huoltajien vastaanottajatunnukset Wilman omista viestilinkeistä…');
+    try{
+      const guardians=await guardianRecipients(students);
+      if(guardians.missing.length){
+        say('Huoltajien vastaanottajatunnuksia ei löytynyt seuraaville opiskelijoille: '+guardians.missing.join(', ')+'. Viestiä ei avattu, jotta vastaanottajia ei jää vahingossa pois.',true);
+        return;
+      }
+      if(!guardians.ids.length){say('Huoltajien viestilinkkejä ei löytynyt. Viestiä ei avattu.',true);return}
+      guardians.ids.forEach(id=>url.searchParams.append('r_guardian',id));
+    }catch(e){say('Huoltajien tunnistaminen epäonnistui: '+e.message,true);return}
+    finally{button.disabled=false}
+  }
+  if(!url.search){say('Vastaanottajia ei löytynyt.',true);return}
+  const opened=window.open(url.href,'_blank','noopener');
+  say('Wilman viestinkirjoitus avattu. Tarkista, että kaikki opiskelijat, opettajat ja huoltajat näkyvät vastaanottajina ennen lähettämistä.');
 }
 function renderResults(){
 results.replaceChildren();
 if(!rows.length){results.append(make('p','oh-help','Opintojaksoja ei löytynyt. Tarkista hakutilanteesta myös mahdolliset latausvirheet.'));return}
-const actions=make('div'),students=make('button','','Viesti opiskelijoille'),teachers=make('button','','Viesti opettajille');actions.append(students,teachers);results.append(actions);
+const actions=make('div');
+const recipientToggle=make('button','oh-action','Valitse viestin vastaanottajat');
+const recipientPanel=make('div','oh-recipient-panel');recipientPanel.hidden=true;
+recipientPanel.style.cssText='padding:10px;margin:6px 0 12px;border:1px solid #cad7df;border-radius:6px';
+const kinds={};
+for(const [kind,label,defaultChecked] of [
+  ['students','Opiskelijat',true],
+  ['teachers','Opettajat',false],
+  ['guardians','Huoltajat',false]
+]){
+  const option=make('label');
+  option.style.cssText='display:inline-flex;flex-direction:row;align-items:center;gap:6px;margin:5px 15px 5px 0;min-width:0;cursor:pointer';
+  const cb=make('input');cb.type='checkbox';cb.checked=defaultChecked;cb.style.width='auto';
+  kinds[kind]=cb;option.append(cb,make('span','',label));recipientPanel.append(option);
+}
+const openMessage=make('button','oh-action','Avaa viesti Wilmassa');
+openMessage.style.display='block';
+recipientPanel.append(openMessage,make('p','oh-help','Valitse yksi tai useampi vastaanottajaryhmä. Viestiä ei lähetetä automaattisesti. Tarkista vastaanottajat Wilmassa.'));
+recipientToggle.onclick=()=>{recipientPanel.hidden=!recipientPanel.hidden};
+actions.append(recipientToggle,recipientPanel);results.append(actions);
 const byStudent=new Map();
 rows.forEach((r,i)=>{if(!byStudent.has(r.person.id))byStudent.set(r.person.id,{person:r.person,items:[]});byStudent.get(r.person.id).items.push({r,i})});
 const selected=new Set(rows.map((_,i)=>i));
@@ -276,8 +337,7 @@ for(const {person,items} of byStudent.values()){
 }
 results.append(make('p','oh-help','Opintojakso näkyy opiskelijaa kohden vain kerran. Ryhmämerkintöjä ei esitetä opintojakson niminä. Ajanjakson reunaviikot voivat sisältää myös sen ulkopuolisia opetuspäiviä.'));
 const chosen=()=>[...selected].map(i=>rows[i]).filter(Boolean);
-students.onclick=()=>compose(chosen().map(r=>r.person),'students');
-teachers.onclick=()=>compose(chosen().flatMap(r=>r.teachers),'teachers');
+openMessage.onclick=()=>composeForSelection(chosen(),{students:kinds.students.checked,teachers:kinds.teachers.checked,guardians:kinds.guardians.checked},openMessage);
 }
 
 renderPicked();renderChoices();
