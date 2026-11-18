@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.3.1
+// @version      0.4.0
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -123,9 +123,16 @@ const blocks=$$('.block',schedule);
 if(!blocks.length)throw Error('NO_SCHEDULE_BLOCKS');
 const out=[];let foundCourses=0,ignoredByDate=0,ignoredByTime=0;
 for(const block of blocks){
-const courseNode=$(':scope > .class',block)||$('.class',block)||$('[data-original-title]',block);
-const course=clean(courseNode?.textContent||courseNode?.getAttribute('data-original-title')||'');
+// .class is the timetable group, NOT the course. Wilma shows the
+// course in the first span of .info; its title may contain the full name.
+const info=$(':scope > .info',block);
+const subject=info?.querySelector(':scope > span:not(.sr-only)');
+const shortCourse=clean(subject?.textContent);
+const longCourse=clean(subject?.getAttribute('title'));
+const genericTitle=/^(opintojakso|kurssi|course|oppiaine|subject|näytä|avaa)$/i;
+const course=longCourse&&!genericTitle.test(longCourse)&&longCourse.length>=shortCourse.length?longCourse:shortCourse;
 if(!course)continue;
+const group=clean($(':scope > .class',block)?.textContent);
 foundCourses++;
 const moment=blockMoment(block,week);
 if(moment.date&&(moment.date<from||moment.date>to)){ignoredByDate++;continue}
@@ -134,7 +141,7 @@ if(!moment.time){parseSchedule.unknownTimes=(parseSchedule.unknownTimes||0)+1;ig
 if(moment.time.end<=clockRange.start||moment.time.start>=clockRange.end){ignoredByTime++;continue}
 }
 const teachers=new Map();for(const a of $$('a.teachers[href]',block)){let u;try{u=new URL(a.href,location.href)}catch{continue}const m=teacherRe.exec(u.pathname);if(!m||u.origin!==location.origin)continue;teachers.set(m[1],{id:m[1],name:clean(a.getAttribute('title')||a.textContent)})}
-out.push({person,course,teachers:[...teachers.values()],week:iso(week),partial:!moment.date&&(week<from||new Date(week.getTime()+6*86400000)>to)});
+out.push({person,course,group,teachers:[...teachers.values()],week:iso(week),partial:!moment.date&&(week<from||new Date(week.getTime()+6*86400000)>to)});
 }
 if(blocks.length&&foundCourses===0)throw Error('Työjärjestysmerkintöjä löytyi, mutta opintojaksotietoa ei tunnistettu.');
 // Genuine empty results are possible after applying date/time filters.
@@ -212,7 +219,10 @@ const failed=output.filter(x=>x?.error);
 const errors=failed.length,combined=new Map();
 const totalBlocks=output.reduce((n,o)=>n+(o?.stats?.blocks||0),0);
 const totalCourses=output.reduce((n,o)=>n+(o?.stats?.courses||0),0);
-for(const o of output){if(!o?.rows)continue;for(const x of o.rows){const key=x.person.id+'|'+norm(x.course)+'|'+x.teachers.map(t=>t.id).sort().join(',');if(!combined.has(key))combined.set(key,{...x,weeks:new Set(),partial:false});const item=combined.get(key);item.weeks.add(x.week);item.partial ||=x.partial}}
+for(const o of output){if(!o?.rows)continue;for(const x of o.rows){const key=x.person.id+'|'+norm(x.course);if(!combined.has(key))combined.set(key,{...x,teachers:[],teacherIds:new Set(),groups:new Set(),weeks:new Set(),partial:false});
+const item=combined.get(key);item.weeks.add(x.week);item.partial ||=x.partial;
+if(x.group)item.groups.add(x.group);
+for(const t of x.teachers)if(!item.teacherIds.has(t.id)){item.teacherIds.add(t.id);item.teachers.push(t)}}}
 rows=[...combined.values()].sort((a,b)=>a.person.name.localeCompare(b.person.name,'fi')||a.course.localeCompare(b.course,'fi'));
 renderResults();
 const firstError=failed[0]?.error||'';
@@ -225,35 +235,50 @@ if(!persons.length){say('Ei vastaanottajia.',true);return}
 if(type==='students'){
 const u=new URL('/messages/compose',location.origin);for(const p of persons)u.searchParams.append('r_student',p.id);window.open(u.href,'_blank','noopener');return
 }
-localStorage.setItem('wilmatools.composeRequest.v1',JSON.stringify({subject:'',body:'',recipientsNames:persons.map(p=>p.name),recipientRule:'opettajat',createdAt:Date.now()}));
+// Teacher links carry stable profile IDs, while their visible text can be
+// only a short staff abbreviation. The message library must verify IDs.
+localStorage.setItem('wilmatools.composeRequest.v1',JSON.stringify({
+  subject:'',body:'',recipientRule:'opettajat',
+  recipientsNames:persons.map(p=>p.name),
+  recipientTeachers:persons.map(p=>({id:p.id,name:p.name})),
+  createdAt:Date.now()
+}));
 window.open(location.origin+'/messages/compose#wt-library','_blank','noopener');
 }
 function renderResults(){
 results.replaceChildren();
-if(!rows.length){
-  results.append(make('p','oh-help','Näytettäviä opintojaksoja ei löytynyt. Tarkista alla oleva hakutilanne: jos työjärjestysmerkintöjä on nolla tai viikkohaku epäonnistui, kyseessä ei välttämättä ole tyhjä työjärjestys.'));
-  return;
+if(!rows.length){results.append(make('p','oh-help','Opintojaksoja ei löytynyt. Tarkista hakutilanteesta myös mahdolliset latausvirheet.'));return}
+const actions=make('div'),students=make('button','','Viesti opiskelijoille'),teachers=make('button','','Viesti opettajille');actions.append(students,teachers);results.append(actions);
+const byStudent=new Map();
+rows.forEach((r,i)=>{if(!byStudent.has(r.person.id))byStudent.set(r.person.id,{person:r.person,items:[]});byStudent.get(r.person.id).items.push({r,i})});
+const selected=new Set(rows.map((_,i)=>i));
+for(const {person,items} of byStudent.values()){
+  const section=make('section','oh-student-group'),heading=make('h3','',person.name+' · '+items.length+' opintojaksoa');
+  heading.style.cssText='font-size:16px;margin:12px 0 5px;font-weight:600';
+  section.append(heading);
+  const table=make('table'),thead=make('thead'),tr=make('tr');
+  ['','Opintojakso','Opettaja(t)'].forEach(x=>tr.append(make('th','',x)));
+  thead.append(tr);table.append(thead);
+  const body=make('tbody');
+  for(const {r,i} of items){
+    const row=make('tr'),pick=make('td'),cb=make('input');cb.type='checkbox';cb.checked=true;cb.setAttribute('aria-label','Valitse '+r.course);
+    cb.onchange=()=>cb.checked?selected.add(i):selected.delete(i);pick.append(cb);
+    row.append(pick,make('td','',r.course));
+    const teacherCell=make('td');
+    if(!r.teachers.length)teacherCell.textContent='Ei opettajatietoa';
+    else for(const teacher of r.teachers){
+      const a=make('a','',teacher.name);a.href='/profiles/teachers/'+teacher.id;a.target='_blank';a.rel='noopener';teacherCell.append(a,document.createTextNode(' '));
+    }
+    row.append(teacherCell);body.append(row);
+  }
+  table.append(body);section.append(table);results.append(section);
 }
-const actions=make('div'),students=make('button','','Viesti opiskelijoille'),teachers=make('button','','Viesti opettajille');
-actions.append(students,teachers);results.append(actions);
-const table=make('table'),head=make('thead'),row=make('tr');
-['','Opiskelija','Opintojakso / ryhmä','Opettaja(t)'].forEach(v=>row.append(make('th','',v)));
-head.append(row);table.append(head);const body=make('tbody'),checked=new Set(rows.map((_,i)=>i));
-for(const [i,r] of rows.entries()){
-  const tr=make('tr'),first=make('td'),cb=make('input');cb.type='checkbox';cb.checked=true;cb.setAttribute('aria-label','Valitse rivi');
-  cb.onchange=()=>cb.checked?checked.add(i):checked.delete(i);first.append(cb);
-  tr.append(first,make('td','',r.person.name),make('td','',r.course));
-  const cell=make('td');
-  if(!r.teachers.length)cell.textContent='Ei opettajatietoa';
-  else for(const t of r.teachers){const a=make('a','',t.name);a.href='/profiles/teachers/'+t.id;a.target='_blank';a.rel='noopener';cell.append(a,document.createTextNode(' '))}
-  tr.append(cell);body.append(tr);
-}
-table.append(body);results.append(table);
-results.append(make('p','oh-help','Yksi rivi / opiskelija ja opintojakso. Työjärjestystiedot perustuvat valitun aikavälin viikkoihin; alku- ja loppuviikon yksittäiset päivät voivat vaatia tarkistuksen Wilmassa.'));
-const chosen=()=>[...checked].map(i=>rows[i]).filter(Boolean);
+results.append(make('p','oh-help','Opintojakso näkyy opiskelijaa kohden vain kerran. Ryhmämerkintöjä ei esitetä opintojakson niminä. Ajanjakson reunaviikot voivat sisältää myös sen ulkopuolisia opetuspäiviä.'));
+const chosen=()=>[...selected].map(i=>rows[i]).filter(Boolean);
 students.onclick=()=>compose(chosen().map(r=>r.person),'students');
 teachers.onclick=()=>compose(chosen().flatMap(r=>r.teachers),'teachers');
 }
+
 renderPicked();renderChoices();
 if(location.hash==='#opiskelijahaku')link.click();
 })();
