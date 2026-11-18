@@ -300,6 +300,8 @@ const genericTitle=/^(opintojakso|kurssi|course|oppiaine|subject|näytä|avaa)$/
 const course=longCourse&&!genericTitle.test(longCourse)&&longCourse.length>=shortCourse.length?longCourse:shortCourse;
 if(!course)continue;
 const group=clean($(':scope > .class',block)?.textContent);
+const roomNode=$(':scope > .info .rooms',block)||$(':scope > .info .room',block)||$('.rooms',block)||$('.room',block)||$('a[href*="/profiles/rooms/"]',block)||$('a[href*="/profiles/facilities/"]',block);
+const room=clean(roomNode?.getAttribute('title')||roomNode?.textContent||'');
 foundCourses++;
 const moment=blockMoment(block,week);
 if((!moment.date||!moment.time)&&block.isConnected){
@@ -313,7 +315,7 @@ if(!moment.time){parseSchedule.unknownTimes=(parseSchedule.unknownTimes||0)+1;ig
 if(moment.time.end<=clockRange.start||moment.time.start>=clockRange.end){ignoredByTime++;continue}
 }
 const teachers=new Map();for(const a of $$('a.teachers[href]',block)){let u;try{u=new URL(a.href,location.href)}catch{continue}const m=teacherRe.exec(u.pathname);if(!m||u.origin!==location.origin)continue;teachers.set(m[1],{id:m[1],name:clean(a.getAttribute('title')||a.textContent)})}
-out.push({person,course,group,teachers:[...teachers.values()],week:iso(week),lesson:{date:moment.date?iso(moment.date):null,time:moment.time,week:iso(week)},partial:!moment.date&&(week<from||new Date(week.getTime()+6*86400000)>to)});
+out.push({person,course,group,teachers:[...teachers.values()],week:iso(week),lesson:{date:moment.date?iso(moment.date):null,time:moment.time,week:iso(week),room},partial:!moment.date&&(week<from||new Date(week.getTime()+6*86400000)>to)});
 }
 if(blocks.length&&foundCourses===0)throw Error('Työjärjestysmerkintöjä löytyi, mutta opintojaksotietoa ei tunnistettu.');
 // Genuine empty results are possible after applying date/time filters.
@@ -338,6 +340,8 @@ function parseExportSchedule(data,person,week,from,to,clockRange){
       const course=clean(group?.FullCaption||group?.Caption||group?.ShortCaption);
       if(!course)continue;
       const groupName=clean(group?.Class||entry.Class||'');
+      const rawRooms=group?.Rooms||entry.Rooms||group?.Room||entry.Room;
+      const room=Array.isArray(rawRooms)?rawRooms.map(x=>clean(x?.LongCaption||x?.Caption||x?.Name||x)).filter(Boolean).join(', '):clean(rawRooms?.LongCaption||rawRooms?.Caption||rawRooms?.Name||(typeof rawRooms==='string'?rawRooms:''));
       const teacherList=new Map();
       for(const t of Array.isArray(group.Teachers)?group.Teachers:[]){
         const id=String(t?.Id||'');
@@ -345,7 +349,7 @@ function parseExportSchedule(data,person,week,from,to,clockRange){
         teacherList.set(id,{id,name:clean(t.LongCaption||t.Caption||'Opettaja')});
       }
       out.push({person,course,group:groupName,teachers:[...teacherList.values()],
-        week:iso(week),lesson:{date:iso(d),time,week:iso(week)},partial:false});
+        week:iso(week),lesson:{date:iso(d),time,week:iso(week),room},partial:false});
     }
   }
   return out;
@@ -415,12 +419,12 @@ if(dates.length*picked.size>120){say('Rajaa hakua: enintään 120 työjärjestys
 abort=new AbortController();const signal=abort.signal;search.disabled=true;cancel.disabled=false;results.replaceChildren();
 const tasks=[...picked.values()].flatMap(p=>dates.map(d=>async()=>{
 // Prefer structured Wilma timetable data with explicit Day/Start/End.
-try{
+if(p.type!=='teacher')try{
   const exported=await tryExportSchedule(p,d,from,to,clockRange,signal);
   if(exported)return exported;
 }catch(e){if(signal.aborted)throw e}
 // Not all Wilma instances grant access to export; fall back to existing view.
-const u=new URL('/profiles/students/'+p.id+'/schedule',location.origin);u.searchParams.set('date',fi(d));
+const u=new URL('/profiles/'+(p.type==='teacher'?'teachers':'students')+'/'+p.id+'/schedule',location.origin);u.searchParams.set('date',fi(d));
 const response=await fetch(u,{credentials:'same-origin',signal});
 if(!response.ok)throw Error('HTTP '+response.status);
 const html=await response.text();
@@ -442,11 +446,11 @@ const failed=output.filter(x=>x?.error);
 const errors=failed.length,combined=new Map();
 const totalBlocks=output.reduce((n,o)=>n+(o?.stats?.blocks||0),0);
 const totalCourses=output.reduce((n,o)=>n+(o?.stats?.courses||0),0);
-for(const o of output){if(!o?.rows)continue;for(const x of o.rows){const key=x.person.id+'|'+norm(x.course);if(!combined.has(key))combined.set(key,{...x,teachers:[],teacherIds:new Set(),groups:new Set(),weeks:new Set(),lessons:new Map(),partial:false});
+for(const o of output){if(!o?.rows)continue;for(const x of o.rows){const key=personKey(x.person)+'|'+norm(x.course);if(!combined.has(key))combined.set(key,{...x,teachers:[],teacherIds:new Set(),groups:new Set(),weeks:new Set(),lessons:new Map(),partial:false});
 const item=combined.get(key);item.weeks.add(x.week);item.partial ||=x.partial;
 if(x.group)item.groups.add(x.group);
 for(const t of x.teachers)if(!item.teacherIds.has(t.id)){item.teacherIds.add(t.id);item.teachers.push(t)}
-const l=x.lesson;if(l){const key=(l.date||'week:'+l.week)+'|'+(l.time?l.time.start+'-'+l.time.end:'?')+'|'+norm(x.group);if(!item.lessons.has(key))item.lessons.set(key,l)}
+const l=x.lesson;if(l){const key=(l.date||'week:'+l.week)+'|'+(l.time?l.time.start+'-'+l.time.end:'?')+'|'+norm(x.group)+'|'+norm(l.room||'');if(!item.lessons.has(key))item.lessons.set(key,l)}
 }}
 rows=[...combined.values()].sort((a,b)=>a.person.name.localeCompare(b.person.name,'fi')||a.course.localeCompare(b.course,'fi'));
 renderResults();
@@ -482,7 +486,8 @@ async function guardianRecipients(students){
 async function composeForSelection(courseRows,kinds,button,options={}){
  if(!courseRows.length){say('Valitse vähintään yksi opintojakso.',true);return}
  if(!options.draftRecipients&&!kinds.students&&!kinds.teachers&&!kinds.guardians){say('Valitse vastaanottajaryhmä.',true);return}
- const students=uniquePeople(courseRows.map(r=>r.person)),teachers=uniquePeople(courseRows.flatMap(r=>r.teachers));
+ const students=uniquePeople(courseRows.filter(r=>r.person.type!=='teacher').map(r=>r.person));
+ const teachers=uniquePeople([...courseRows.flatMap(r=>r.teachers),...courseRows.filter(r=>r.person.type==='teacher').map(r=>r.person)]);
  const url=new URL('/messages/compose',location.origin);
  const useDraft=Boolean(options.draftRecipients);
  const tab=!useDraft&&kinds.guardians?window.open('about:blank','_blank'):null;
@@ -578,14 +583,16 @@ recipientPanel.append(openMessage,make('p','oh-help','Valitse yksi tai useampi v
 recipientToggle.onclick=()=>{recipientPanel.hidden=!recipientPanel.hidden};
 actions.append(recipientToggle,recipientPanel);results.append(actions);
 const byStudent=new Map();
-rows.forEach((r,i)=>{if(!byStudent.has(r.person.id))byStudent.set(r.person.id,{person:r.person,items:[]});byStudent.get(r.person.id).items.push({r,i})});
+rows.forEach((r,i)=>{const key=personKey(r.person);if(!byStudent.has(key))byStudent.set(key,{person:r.person,items:[]});byStudent.get(key).items.push({r,i})});
 const selected=new Set(rows.map((_,i)=>i));
+const onlyTeachers=rows.every(r=>r.person.type==='teacher');
+if(onlyTeachers){kinds.students.checked=false;kinds.teachers.checked=true;kinds.guardians.checked=false}
 for(const {person,items} of byStudent.values()){
-  const section=make('section','oh-student-group'),heading=make('h3','',person.name+' · '+items.length+' opintojaksoa');
+  const section=make('section','oh-student-group'),heading=make('h3','',(person.type==='teacher'?'Opettaja: ':'Opiskelija: ')+person.name+' · '+items.length+' opintojaksoa');
   heading.style.cssText='font-size:16px;margin:12px 0 5px;font-weight:600';
   section.append(heading);
   const table=make('table'),thead=make('thead'),tr=make('tr');
-  ['','Opintojakso','Opettaja(t)','Oppituntien ajankohdat'].forEach(x=>tr.append(make('th','',x)));
+  ['','Opintojakso','Opettaja(t)','Oppituntien ajankohdat','Opetustila'].forEach(x=>tr.append(make('th','',x)));
   thead.append(tr);table.append(thead);
   const body=make('tbody');
   for(const {r,i} of items){
@@ -601,7 +608,10 @@ for(const {person,items} of byStudent.values()){
 const lessons=[...(r.lessons?.values()||[])].sort((a,b)=>(a.date||a.week).localeCompare(b.date||b.week)||(a.time?.start??-1)-(b.time?.start??-1));
 lessons.forEach((l,j)=>{if(j)lessonCell.append(document.createTextNode(' · '));lessonCell.append(make('span','',lessonLabel(l)))});
 if(!lessons.length)lessonCell.textContent='Ajankohta ei tiedossa';
-row.append(teacherCell,lessonCell);body.append(row);
+const roomCell=make('td');
+lessons.forEach((l,j)=>{if(j)roomCell.append(document.createTextNode(' · '));roomCell.append(make('span','',l.room||'Ei huonetietoa'))});
+if(!lessons.length)roomCell.textContent='Ei huonetietoa';
+row.append(teacherCell,lessonCell,roomCell);body.append(row);
   }
   table.append(body);section.append(table);results.append(section);
 }
