@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.3.0
+// @version      0.3.1
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -11,6 +11,8 @@
 // ==/UserScript==
 (() => {
 'use strict';
+// Prevent duplicated tool initialization inside the hidden schedule viewer.
+if(window.top!==window.self)return;
 const directoryPage=/^\/profiles\/students\/?$/.test(location.pathname);
 if(!/^\/profiles\/students(?:\/|$)/.test(location.pathname)||document.getElementById('oh-tab'))return;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
@@ -114,11 +116,11 @@ const times=[...source.matchAll(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/g)].map(m=>+m
 return {date,time:times.length>=2?{start:times[0],end:times[1]}:null};
 }
 function parseSchedule(html,person,week,from,to,clockRange){
-const doc=new DOMParser().parseFromString(html,'text/html');
+const doc=typeof html==='string'?new DOMParser().parseFromString(html,'text/html'):html;
 const schedule=$('#schedule-container',doc)||$('#schedule',doc);
 if(!schedule)throw Error('Työjärjestyksen sisältö puuttuu haetusta sivusta (mahdollinen käyttöoikeus- tai kirjautumisongelma).');
 const blocks=$$('.block',schedule);
-if(!blocks.length)throw Error('Työjärjestysmerkintöjä ei löytynyt haetusta HTML:stä. Wilma saattaa luoda oppitunnit JavaScriptillä.');
+if(!blocks.length)throw Error('NO_SCHEDULE_BLOCKS');
 const out=[];let foundCourses=0,ignoredByDate=0,ignoredByTime=0;
 for(const block of blocks){
 const courseNode=$(':scope > .class',block)||$('.class',block)||$('[data-original-title]',block);
@@ -138,6 +140,47 @@ if(blocks.length&&foundCourses===0)throw Error('Työjärjestysmerkintöjä löyt
 // Genuine empty results are possible after applying date/time filters.
 return {rows:out,stats:{blocks:blocks.length,courses:foundCourses,ignoredByDate,ignoredByTime}};
 }
+async function renderedSchedule(url,signal){
+  // Wilma may create timetable blocks client-side after the HTML has loaded.
+  // The iframe executes Wilma's own scripts and is never used to bypass permissions.
+  return new Promise((resolve,reject)=>{
+    const iframe=document.createElement('iframe');
+    iframe.setAttribute('aria-hidden','true');
+    iframe.tabIndex=-1;
+    iframe.style.cssText='position:fixed;left:-20000px;top:0;width:1100px;height:800px;visibility:hidden;pointer-events:none;border:0';
+    let done=false,checkTimer=null,timeout=null,loaded=false;
+    const cleanup=()=>{
+      if(checkTimer)clearInterval(checkTimer);
+      if(timeout)clearTimeout(timeout);
+      signal.removeEventListener('abort',onAbort);
+      iframe.remove();
+    };
+    const finish=(err,doc)=>{
+      if(done)return;
+      done=true;
+      if(err)reject(err);else resolve(doc);
+      cleanup();
+    };
+    const onAbort=()=>finish(new Error('Haku keskeytettiin.'));
+    if(signal.aborted){reject(new Error('Haku keskeytettiin.'));return}
+    signal.addEventListener('abort',onAbort,{once:true});
+    iframe.addEventListener('load',()=>{loaded=true});
+    iframe.addEventListener('error',()=>finish(new Error('Työjärjestyssivun avaaminen ei onnistunut.')));
+    timeout=setTimeout(()=>{
+      let d;try{d=iframe.contentDocument}catch{}
+      if(d?.querySelector('#schedule-container'))finish(null,d);
+      else finish(new Error('Työjärjestystä ei saatu ladattua Wilman sivulta.'));
+    },8500);
+    checkTimer=setInterval(()=>{
+      let d;try{d=iframe.contentDocument}catch{return}
+      if(!d)return;
+      if(d.querySelector('#schedule .block'))finish(null,d);
+      else if(loaded&&!d.querySelector('#schedule-container'))finish(new Error('Työjärjestys ei näy ladatulla sivulla.'));
+    },180);
+    iframe.src=url.href;
+    document.body.append(iframe);
+  });
+}
 async function runPool(tasks,signal,update){let next=0,done=0;const output=new Array(tasks.length);async function worker(){while(next<tasks.length&&!signal.aborted){const i=next++;try{const result=await tasks[i]();output[i]={rows:result.rows,stats:result.stats}}catch(e){output[i]={error:e.message}}update(++done,tasks.length)}}await Promise.all(Array.from({length:Math.min(3,tasks.length)},worker));return output}
 search.onclick=async()=>{
 if(abort)return;const from=parseDate(start.value),to=parseDate(end.value);
@@ -147,7 +190,22 @@ parseSchedule.unknownTimes=0;if(!from||!to||from>to){say('Virheellinen ajanjakso
 const dates=[];for(let d=weekStart(from);d<=to;d.setDate(d.getDate()+7))dates.push(new Date(d));
 if(dates.length*picked.size>120){say('Rajaa hakua: enintään 120 työjärjestyshakua kerralla.',true);return}
 abort=new AbortController();const signal=abort.signal;search.disabled=true;cancel.disabled=false;results.replaceChildren();
-const tasks=[...picked.values()].flatMap(p=>dates.map(d=>async()=>{const u=new URL('/profiles/students/'+p.id+'/schedule',location.origin);u.searchParams.set('date',fi(d));const response=await fetch(u,{credentials:'same-origin',signal});if(!response.ok)throw Error('HTTP '+response.status);return parseSchedule(await response.text(),p,d,from,to,clockRange)}));
+const tasks=[...picked.values()].flatMap(p=>dates.map(d=>async()=>{
+const u=new URL('/profiles/students/'+p.id+'/schedule',location.origin);u.searchParams.set('date',fi(d));
+const response=await fetch(u,{credentials:'same-origin',signal});
+if(!response.ok)throw Error('HTTP '+response.status);
+const html=await response.text();
+try{return parseSchedule(html,p,d,from,to,clockRange)}
+catch(e){
+  if(e.message!=='NO_SCHEDULE_BLOCKS')throw e;
+  const doc=await renderedSchedule(u,signal);
+  try{return parseSchedule(doc,p,d,from,to,clockRange)}
+  catch(inner){
+    if(inner.message==='NO_SCHEDULE_BLOCKS')return {rows:[],stats:{blocks:0,courses:0,ignoredByDate:0,ignoredByTime:0}};
+    throw inner;
+  }
+}
+}));
 try{
 const output=await runPool(tasks,signal,(n,total)=>say('Haettu '+n+'/'+total+' työjärjestystä…'));
 const failed=output.filter(x=>x?.error);
