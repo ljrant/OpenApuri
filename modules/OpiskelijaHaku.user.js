@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.4.1
+// @version      0.4.2
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -237,20 +237,14 @@ say((signal.aborted?'Keskeytetty. ':'Valmis. ')+rows.length+' opintojaksoa, työ
 }catch(e){say('Hakuvirhe: '+e.message,true)}finally{abort=null;search.disabled=false;cancel.disabled=true}
 };
 function compose(list,type){
-const persons=[...new Map(list.map(p=>[p.id,p])).values()];
-if(!persons.length){say('Ei vastaanottajia.',true);return}
-if(type==='students'){
-const u=new URL('/messages/compose',location.origin);for(const p of persons)u.searchParams.append('r_student',p.id);window.open(u.href,'_blank','noopener');return
-}
-// Teacher links carry stable profile IDs, while their visible text can be
-// only a short staff abbreviation. The message library must verify IDs.
-localStorage.setItem('wilmatools.composeRequest.v1',JSON.stringify({
-  subject:'',body:'',recipientRule:'opettajat',
-  recipientsNames:persons.map(p=>p.name),
-  recipientTeachers:persons.map(p=>({id:p.id,name:p.name})),
-  createdAt:Date.now()
-}));
-window.open(location.origin+'/messages/compose#wt-library','_blank','noopener');
+  const persons=[...new Map(list.map(p=>[String(p.id),p])).values()]
+    .filter(p=>/^\d+$/.test(String(p.id)));
+  if(!persons.length){say('Ei vastaanottajia.',true);return}
+  const param=type==='teachers'?'r_teacher':type==='students'?'r_student':null;
+  if(!param){say('Tuntematon vastaanottajatyyppi.',true);return}
+  const url=new URL('/messages/compose',location.origin);
+  persons.forEach(p=>url.searchParams.append(param,String(p.id)));
+  window.open(url.href,'_blank','noopener');
 }
 function renderResults(){
 results.replaceChildren();
