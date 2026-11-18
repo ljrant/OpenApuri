@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.6.7
+// @version      0.6.8
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
@@ -324,7 +324,7 @@ const group=clean($(':scope > .class',block)?.textContent);
 const groupUrls=[];
 for(const link of $$('a[href]',block)){
   let u;try{u=new URL(link.getAttribute('href'),location.origin)}catch{continue}
-  if(u.origin===location.origin&&/^\/(?:groups|profiles\/groups)\/\d+\/?$/.test(u.pathname))groupUrls.push(u.pathname);
+  if(u.origin===location.origin&&/^\/(?:groups|profiles\/(?:groups|classes))\/\d+\/?$/.test(u.pathname))groupUrls.push(u.pathname);
 }
 const roomNode=$(':scope > .info .rooms',block)||$(':scope > .info .room',block)||
   $('a.rooms',block)||$('a.room',block)||$('.rooms',block)||$('.room',block)||
@@ -528,24 +528,45 @@ async function selectedCourseStudents(courseRows){
   for(const path of rosterUrls){
     try{
       const url=new URL(path,location.origin);
-      if(url.origin!==location.origin||!/^\/(?:groups|profiles\/groups)\/\d+\/?$/.test(url.pathname))throw Error('Virheellinen ryhmälinkki');
+      if(url.origin!==location.origin||!/^\/(?:groups|profiles\/(?:groups|classes))\/\d+\/?$/.test(url.pathname))throw Error('Virheellinen ryhmälinkki');
       const res=await fetch(url.href,{credentials:'same-origin'});
       if(!res.ok)throw Error('HTTP '+res.status);
       const doc=new DOMParser().parseFromString(await res.text(),'text/html');
-      // Use only the visible group member list or an actual student roster,
-      // not generic navigation links which may list unrelated students.
+      // Class profiles expose their own enrolled pupils as student profile
+      // anchors, without the older #students / .student-list container.
+      // Limit the search to the class page's main article/content; never
+      // scrape navigation, sidebar, or unrelated Wilma directories.
       const roster=doc.querySelector('#students, .student-list, .students-list, [data-role="students"], table.students, table.student-list, #group-students');
-      if(!roster){unresolved.push('Ryhmän jäsenluettelo ei ole tunnistettavissa: '+url.pathname);continue}
-      let count=0;
-      for(const a of $$('a[href]',roster)){
+      const classProfile=/^\/profiles\/classes\/\d+\/?$/.test(url.pathname);
+      const main=doc.querySelector('main#main-content')||doc.querySelector('#main-content');
+      let root=roster;
+      if(!root&&classProfile)root=main;
+      if(!root){
+        unresolved.push('Ryhmän opiskelijaluetteloa ei voitu tunnistaa: '+url.pathname);
+        continue;
+      }
+      const studentLinks=new Map();
+      for(const a of $$('a[href]',root)){
+        if(a.closest('nav, header, footer, aside, .sidebar, .navigation, .navbar, .breadcrumb, .pagination'))continue;
         let link;try{link=new URL(a.getAttribute('href'),url)}catch{continue}
         const m=studentRe.exec(link.pathname);
         if(link.origin!==location.origin||!m)continue;
         const name=clean(a.textContent);
-        recipients.set(m[1],{id:m[1],name:name||'Opiskelija',type:'student'});
-        count++;
+        if(!name||name.length>120)continue;
+        studentLinks.set(m[1],{id:m[1],name,type:'student'});
       }
-      if(!count)unresolved.push('Ryhmän opiskelijoita ei voitu tunnistaa: '+url.pathname);
+      const count=studentLinks.size;
+      if(!count){
+        unresolved.push('Ryhmän jäsenluettelossa ei ollut tunnistettavia opiskelijaprofiileja: '+url.pathname);
+        continue;
+      }
+      if(classProfile&&!roster){
+        // Class profile fallback is less specific than an explicit roster.
+        // Show the provenance in the compose warning rather than presenting
+        // the selection as independently verified membership.
+        unresolved.push('Tarkista ryhmän '+url.pathname+' '+count+' opiskelijavastaanottajaa Wilmassa: opiskelijat poimittiin ryhmäsivun pääsisällöstä.');
+      }
+      for(const [id,p] of studentLinks)recipients.set(id,p);
     }catch(e){unresolved.push('Ryhmän opiskelijoiden hakeminen epäonnistui')}
   }
   return {students:[...recipients.values()],unresolved};
@@ -685,7 +706,7 @@ for(const {person,items} of byStudent.values()){
     const row=make('tr'),pick=make('td'),cb=make('input');cb.type='checkbox';cb.checked=true;cb.setAttribute('aria-label','Valitse '+r.course);
     cb.onchange=()=>cb.checked?selected.add(i):selected.delete(i);pick.append(cb);
     const courseCell=make('td');
-    const groupLinks=[...(r.groupUrls||[])].filter(path=>/^\/(?:groups|profiles\/groups)\/\d+\/?$/.test(String(path)));
+    const groupLinks=[...(r.groupUrls||[])].filter(path=>/^\/(?:groups|profiles\/(?:groups|classes))\/\d+\/?$/.test(String(path)));
     if(groupLinks.length){
       const courseLink=make('a','',r.course);
       courseLink.href=groupLinks[0];courseLink.target='_blank';courseLink.rel='noopener noreferrer';
