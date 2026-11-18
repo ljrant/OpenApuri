@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.2.3
+// @version      0.2.4
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -11,7 +11,8 @@
 // ==/UserScript==
 (() => {
 'use strict';
-if(!/^\/profiles\/students\/?$/.test(location.pathname)||document.getElementById('oh-tab'))return;
+const directoryPage=/^\/profiles\/students\/?$/.test(location.pathname);
+if(!/^\/profiles\/students(?:\/|$)/.test(location.pathname)||document.getElementById('oh-tab'))return;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e};
 const clean=s=>String(s||'').trim().replace(/\s+/g,' '),norm=s=>clean(s).toLocaleLowerCase('fi');
@@ -21,8 +22,16 @@ const parseDate=v=>{const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(v||'');if(!m)return n
 const weekStart=d=>{const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));return x};
 const css=make('style');css.textContent='#oh-panel{padding:16px;min-height:300px}#oh-panel *{box-sizing:border-box}#oh-panel .oh-fields{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}#oh-panel label{display:flex;flex-direction:column;gap:4px;flex:1;min-width:145px}#oh-panel input,#oh-panel textarea{border:1px solid #aab9c5;border-radius:4px;padding:8px;width:100%}#oh-panel textarea{min-height:100px}#oh-panel button{padding:7px 11px;margin:4px;border:1px solid #abc;background:#fff;border-radius:4px;cursor:pointer}#oh-panel button:disabled{opacity:.5}#oh-panel .oh-action{background:#176393;color:white}#oh-panel .oh-scroll{overflow:auto}#oh-panel table{width:100%;border-collapse:collapse}#oh-panel th,#oh-panel td{text-align:left;padding:8px;border-bottom:1px solid #dae1e6;vertical-align:top}#oh-panel th{background:#edf2f6}#oh-panel .oh-pill{display:inline-block;background:#eef5fa;padding:3px 6px;margin:3px;border-radius:4px}#oh-panel .oh-help{color:#576b79;font-size:12px;white-space:pre-wrap}@media(max-width:650px){#oh-panel label{min-width:100%}}';
 css.textContent+='#oh-panel .oh-chooser{max-width:650px;margin:10px 0}#oh-panel .oh-choices{max-height:250px;overflow:auto;border:1px solid #b5c6d1;border-radius:5px;padding:4px;background:#fff}#oh-panel .oh-choice{display:block;width:100%;text-align:left;margin:0;padding:7px;border:0;border-bottom:1px solid #edf0f2;border-radius:0;background:#fff;color:#234b63}#oh-panel .oh-choice:hover{background:#eaf5fb}#oh-panel .oh-choice.oh-chosen{background:#dff0e5;color:#204b31;font-weight:600}#oh-panel .oh-time-toggle{display:flex;align-items:center;gap:8px;margin:8px 0;flex-direction:row;width:max-content;cursor:pointer}#oh-panel [hidden]{display:none!important}';document.head.append(css);
-const tabs=$('main#main-content ul.nav.nav-tabs-primary'),native=$('main#main-content .panel.tab-content');if(!tabs||!native){console.warn('[OpiskelijaHaku] Välilehtipalkkia ei löydy');return}
-const li=make('li');li.id='oh-tab';const link=make('a','', 'OpiskelijaHaku');link.href='#opiskelijahaku';link.setAttribute('role','tab');li.append(link);tabs.insertBefore(li,$('.tabdrop',tabs));
+const tabs=$('main#main-content ul.nav.nav-tabs-primary')||$('ul.nav.nav-tabs-primary');
+if(!tabs){console.warn('[OpiskelijaHaku] Välilehtipalkkia ei löydy');return}
+const li=make('li');li.id='oh-tab';
+const link=make('a','','OpiskelijaHaku');
+link.href=directoryPage?'#opiskelijahaku':'/profiles/students/#opiskelijahaku';
+link.setAttribute('role','tab');li.append(link);
+tabs.insertBefore(li,$('.tabdrop',tabs));
+if(!directoryPage)return; // Student profiles: keep Wilma's own tabs and navigate to the search.
+const native=$('main#main-content .panel.tab-content')||$('.panel.tab-content');
+if(!native){li.remove();console.warn('[OpiskelijaHaku] Sisältöpaneelia ei löydy');return}
 const panel=make('section');panel.id='oh-panel';panel.hidden=true;native.insertAdjacentElement('afterend',panel);
 let active=false,abort=null,rows=[],picked=new Map(),directory=new Map(),directoryLoading=false,directoryLoaded=false;
 function changeTab(enabled){active=enabled;panel.hidden=!enabled;native.style.display=enabled?'none':'';li.classList.toggle('active',enabled);link.setAttribute('aria-selected',String(enabled))}
@@ -148,4 +157,5 @@ table.append(body);results.append(table,make('p','oh-help','* Ajanjakson ensimm�
 const chosen=()=>[...selected].map(i=>rows[i]);students.onclick=()=>compose(chosen().map(r=>r.person),'students');teachers.onclick=()=>compose(chosen().flatMap(r=>r.teachers),'teachers');
 }
 renderPicked();renderChoices();
+if(location.hash==='#opiskelijahaku')link.click();
 })();
