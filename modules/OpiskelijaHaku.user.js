@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.5.4
+// @version      0.5.5
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -128,6 +128,74 @@ let time=ranges.length===2?{start:+ranges[0][1]*60+(+ranges[0][2]),end:+ranges[1
 if(time&&time.end<=time.start)time=null;
 return {date,time};
 }
+// Extract date and time from the rendered Wilma grid when lesson text lacks them.
+// Only calibrated ruler coordinates and identifiable weekday headings are accepted.
+function gridLessonMoment(block,week){
+  const root=block.closest('.schedule');
+  const axis=root?.querySelector('.hourlist.hours-container')||root?.querySelector('.hourlist');
+  const container=block.closest('.schedule-container');
+  if(!root||!axis||!container)return {date:null,time:null};
+  const clock=s=>{
+    const m=String(s||'').match(/(?:^|[^\d])([01]?\d|2[0-3])[:.]([0-5]\d)(?!\d)/);
+    return m?(+m[1]*60+(+m[2])):null;
+  };
+  const ticks=[];
+  const walk=axis.querySelectorAll('.hour, .time, [class*="label"], span, div');
+  for(const el of walk){
+    if(el.children.length&&el.textContent.trim().length>16)continue;
+    const value=clock(el.textContent);
+    if(value===null)continue;
+    const r=el.getBoundingClientRect();
+    if(r.height<=0||r.width<=0)continue;
+    // Prefer leaf text positions, avoiding duplicated times in ancestor nodes.
+    if([...el.children].some(c=>clock(c.textContent)!==null))continue;
+    ticks.push({value,y:r.top+r.height/2});
+  }
+  ticks.sort((a,b)=>a.y-b.y);
+  const pairs=[];
+  for(const tick of ticks)if(!pairs.some(p=>Math.abs(p.y-tick.y)<3))pairs.push(tick);
+  let time=null;
+  if(pairs.length>=2){
+    const a=pairs[0],b=pairs[pairs.length-1],scale=(b.y-a.y)/(b.value-a.value);
+    if(Number.isFinite(scale)&&scale>.3&&scale<10){
+      const r=block.getBoundingClientRect();
+      const toMin=y=>Math.round((a.value+(y-a.y)/scale)/5)*5;
+      const start=toMin(r.top),end=toMin(r.bottom);
+      if(start>=0&&end<=1440&&end>start)time={start,end};
+    }
+  }
+  const weekdays=['ma','ti','ke','to','pe','la','su'];
+  const header=root.querySelector('.weekday-container');
+  const headings=[];
+  if(header){
+    const dayRe=/(maanantai|tiistai|keskiviikko|torstai|perjantai|lauantai|sunnuntai|(?:^|[\s(])(?:ma|ti|ke|to|pe|la|su)(?:[\s.)]|$))/i;
+    for(const el of header.querySelectorAll('*')){
+      if(el.children.length&&[...el.children].some(c=>dayRe.test(c.textContent)))continue;
+      const label=String(el.textContent||'').trim();
+      if(!label||!dayRe.test(label))continue;
+      const x=el.getBoundingClientRect();
+      if(x.width<=0)continue;
+      const low=label.toLocaleLowerCase('fi');
+      const d=low.match(/maanantai|tiistai|keskiviikko|torstai|perjantai|lauantai|sunnuntai|(?:^|[\s(])(ma|ti|ke|to|pe|la|su)(?=[\s.)]|$)/);
+      if(!d)continue;
+      const day=d[0].trim().replace(/[().]/g,'');
+      let index=weekdays.indexOf(day);
+      if(index<0)index=['maanantai','tiistai','keskiviikko','torstai','perjantai','lauantai','sunnuntai'].indexOf(day);
+      if(index>=0)headings.push({index,x:x.left+x.width/2});
+    }
+  }
+  let date=null;
+  if(headings.length){
+    const middle=block.getBoundingClientRect(),x=middle.left+middle.width/2;
+    const best=headings.reduce((a,b)=>Math.abs(b.x-x)<Math.abs(a.x-x)?b:a);
+    // Ensure it lies within a plausible weekday column, never choose a faraway label.
+    const spacing=headings.length>1?Math.min(...headings.slice(1).map((h,i)=>Math.abs(h.x-headings[i].x)).filter(n=>n>4)):container.getBoundingClientRect().width/5;
+    if(Math.abs(best.x-x)<=Math.max(25,spacing*.6)){
+      date=new Date(week);date.setDate(date.getDate()+best.index);
+    }
+  }
+  return {date,time};
+}
 function lessonLabel(l){
 const day=l.date?fi(new Date(l.date+'T12:00:00')):'Viikko '+l.week+' (päivä tuntematon)';
 return day+(l.time?' '+pad(Math.floor(l.time.start/60))+':'+pad(l.time.start%60)+'–'+pad(Math.floor(l.time.end/60))+':'+pad(l.time.end%60):' (kellonaika tuntematon)');
@@ -152,6 +220,11 @@ if(!course)continue;
 const group=clean($(':scope > .class',block)?.textContent);
 foundCourses++;
 const moment=blockMoment(block,week);
+if((!moment.date||!moment.time)&&block.isConnected){
+  const fromGrid=gridLessonMoment(block,week);
+  if(!moment.date)moment.date=fromGrid.date;
+  if(!moment.time)moment.time=fromGrid.time;
+}
 if(moment.date&&(moment.date<from||moment.date>to)){ignoredByDate++;continue}
 if(clockRange){
 if(!moment.time){parseSchedule.unknownTimes=(parseSchedule.unknownTimes||0)+1;ignoredByTime++;continue}
@@ -208,45 +281,40 @@ async function tryExportSchedule(person,week,from,to,clockRange,signal){
   if(!rows?.length)return null;
   return {rows,stats:{blocks:rows.length,courses:rows.length,ignoredByDate:0,ignoredByTime:0,source:'json'}};
 }
-async function renderedSchedule(url,signal){
-  // Wilma may create timetable blocks client-side after the HTML has loaded.
-  // The iframe executes Wilma's own scripts and is never used to bypass permissions.
+async function renderedSchedule(url,signal,parse){
+  // Parse *while attached*: removing the iframe invalidates layout geometry.
   return new Promise((resolve,reject)=>{
-    const iframe=document.createElement('iframe');
-    iframe.setAttribute('aria-hidden','true');
-    iframe.tabIndex=-1;
-    iframe.style.cssText='position:fixed;left:-20000px;top:0;width:1100px;height:800px;visibility:hidden;pointer-events:none;border:0';
-    let done=false,checkTimer=null,timeout=null,loaded=false;
-    const cleanup=()=>{
-      if(checkTimer)clearInterval(checkTimer);
-      if(timeout)clearTimeout(timeout);
-      signal.removeEventListener('abort',onAbort);
-      iframe.remove();
-    };
+    const frame=document.createElement('iframe');
+    frame.setAttribute('aria-hidden','true');frame.tabIndex=-1;
+    frame.style.cssText='position:fixed;left:-20000px;top:0;width:1100px;height:800px;visibility:hidden;pointer-events:none;border:0';
+    let completed=false,interval=null,timeout=null,loaded=false;
+    const cleanup=()=>{clearInterval(interval);clearTimeout(timeout);signal.removeEventListener('abort',abort);frame.remove()};
     const finish=(err,doc)=>{
-      if(done)return;
-      done=true;
-      if(err)reject(err);else resolve(doc);
-      cleanup();
+      if(completed)return;
+      completed=true;
+      try{if(err)reject(err);else resolve(parse(doc))}catch(e){reject(e)}
+      finally{cleanup()}
     };
-    const onAbort=()=>finish(new Error('Haku keskeytettiin.'));
-    if(signal.aborted){reject(new Error('Haku keskeytettiin.'));return}
-    signal.addEventListener('abort',onAbort,{once:true});
-    iframe.addEventListener('load',()=>{loaded=true});
-    iframe.addEventListener('error',()=>finish(new Error('Työjärjestyssivun avaaminen ei onnistunut.')));
+    const abort=()=>finish(new Error('Haku keskeytettiin.'));
+    if(signal.aborted)return reject(new Error('Haku keskeytettiin.'));
+    signal.addEventListener('abort',abort,{once:true});
+    frame.addEventListener('load',()=>{loaded=true});
+    frame.addEventListener('error',()=>finish(new Error('Työjärjestyksen avaus epäonnistui.')));
+    interval=setInterval(()=>{
+      let doc;try{doc=frame.contentDocument}catch{return}
+      if(!doc)return;
+      if(doc.querySelector('#schedule .block')){
+        // Allow one paint so getBoundingClientRect reflects rendered grid.
+        clearInterval(interval);
+        requestAnimationFrame(()=>requestAnimationFrame(()=>finish(null,doc)));
+      }else if(loaded&&!doc.querySelector('#schedule-container'))finish(new Error('Työjärjestys puuttuu ladatulta sivulta.'));
+    },170);
     timeout=setTimeout(()=>{
-      let d;try{d=iframe.contentDocument}catch{}
-      if(d?.querySelector('#schedule-container'))finish(null,d);
-      else finish(new Error('Työjärjestystä ei saatu ladattua Wilman sivulta.'));
-    },8500);
-    checkTimer=setInterval(()=>{
-      let d;try{d=iframe.contentDocument}catch{return}
-      if(!d)return;
-      if(d.querySelector('#schedule .block'))finish(null,d);
-      else if(loaded&&!d.querySelector('#schedule-container'))finish(new Error('Työjärjestys ei näy ladatulla sivulla.'));
-    },180);
-    iframe.src=url.href;
-    document.body.append(iframe);
+      let doc;try{doc=frame.contentDocument}catch{}
+      if(doc?.querySelector('#schedule .block'))finish(null,doc);
+      else finish(new Error('Wilman työjärjestyksen lataus aikakatkaistiin.'));
+    },9000);
+    frame.src=url.href;document.body.append(frame);
   });
 }
 async function runPool(tasks,signal,update){let next=0,done=0;const output=new Array(tasks.length);async function worker(){while(next<tasks.length&&!signal.aborted){const i=next++;try{const result=await tasks[i]();output[i]={rows:result.rows,stats:result.stats}}catch(e){output[i]={error:e.message}}update(++done,tasks.length)}}await Promise.all(Array.from({length:Math.min(3,tasks.length)},worker));return output}
@@ -269,15 +337,16 @@ const u=new URL('/profiles/students/'+p.id+'/schedule',location.origin);u.search
 const response=await fetch(u,{credentials:'same-origin',signal});
 if(!response.ok)throw Error('HTTP '+response.status);
 const html=await response.text();
-try{return parseSchedule(html,p,d,from,to,clockRange)}
+let fallback=null;
+try{fallback=parseSchedule(html,p,d,from,to,clockRange)}
+catch(e){if(e.message!=='NO_SCHEDULE_BLOCKS')throw e}
+if(fallback&&fallback.rows.length&&fallback.rows.every(x=>x.lesson?.date&&x.lesson?.time))return fallback;
+try{return await renderedSchedule(u,signal,doc=>parseSchedule(doc,p,d,from,to,clockRange))}
 catch(e){
-  if(e.message!=='NO_SCHEDULE_BLOCKS')throw e;
-  const doc=await renderedSchedule(u,signal);
-  try{return parseSchedule(doc,p,d,from,to,clockRange)}
-  catch(inner){
-    if(inner.message==='NO_SCHEDULE_BLOCKS')return {rows:[],stats:{blocks:0,courses:0,ignoredByDate:0,ignoredByTime:0}};
-    throw inner;
-  }
+  if(signal.aborted)throw e;
+  if(fallback)return fallback;
+  if(e.message==='NO_SCHEDULE_BLOCKS')return {rows:[],stats:{blocks:0,courses:0,ignoredByDate:0,ignoredByTime:0}};
+  throw e;
 }
 }));
 try{
