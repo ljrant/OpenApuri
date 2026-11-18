@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.4.0
+// @version      0.4.1
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -63,13 +63,14 @@ const actions=make('div'),search=make('button','oh-action','Hae työjärjestykse
 const selection=make('div'),status=make('p','oh-help'),results=make('div','oh-scroll');panel.append(selection,status,results);
 const say=(m,error)=>{status.textContent=m;status.style.color=error?'#9e2828':'#345d76'};
 function readNames(doc){for(const a of $$('a[href]',doc)){let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}if(u.origin!==location.origin)continue;const m=studentRe.exec(u.pathname);if(!m)continue;const n=clean(a.textContent);if(n.length>2&&n.length<120)directory.set(m[1],{id:m[1],name:n})}}
-readNames(document);
+// Do not seed the picker from the default 'Ohjaamasi tai valvomasi opiskelijat' overview.
+// Names are loaded explicitly from the directory's full-list / alphabetical views.
 function renderChoices(){
 choices.replaceChildren();
 const q=norm(filter.value);
 const matches=[...directory.values()].filter(p=>nameMatches(p.name,q)).sort((a,b)=>a.name.localeCompare(b.name,'fi'));
 const visible=matches.slice(0,80);
-if(!visible.length){choices.append(make('div','oh-help',directoryLoading?'Opiskelijoita ladataan…':'Ei osumia.'));return}
+if(!visible.length){choices.append(make('div','oh-help',directoryLoading?'Opiskelijaluetteloa ladataan…':directoryLoaded?'Ei osumia.':'Opiskelijaluetteloa ei ole vielä ladattu. Kirjoita hakusana tai paina Päivitä opiskelijaluettelo.'));return}
 const fragment=document.createDocumentFragment();
 for(const person of visible){
 const b=make('button','oh-choice'+(picked.has(person.id)?' oh-chosen':''),(picked.has(person.id)?'✓  ':'')+person.name);
@@ -86,16 +87,22 @@ if(directoryLoading)return;
 directoryLoading=true;refresh.disabled=true;renderChoices();say('Ladataan Wilman opiskelijaluetteloa…');
 try{
 const urls=new Map();
-for(const a of $$('main#main-content ul.nav.nav-tabs-primary a[href]')){
-let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}
-if(u.origin===location.origin&&/^\/profiles\/students\/[^/]+\/?$/.test(u.pathname)&&!studentRe.test(u.pathname))urls.set(u.href,u);
+const directoryLinks=$$('main#main-content a[href]').filter(a=>!a.closest('#oh-panel'));
+for(const a of directoryLinks){
+  let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}
+  if(u.origin!==location.origin||studentRe.test(u.pathname))continue;
+  const isAlphabetical=/^\/profiles\/students\/[a-zåäö](?:\/)?$/i.test(u.pathname);
+  const isAllTab=norm(a.textContent)==='kaikki'&&/^\/profiles\/students\/?$/.test(u.pathname);
+  if(isAlphabetical||isAllTab)urls.set(u.href,u);
 }
-// The alphabetical filter links are located inside the content pane on "Kaikki" too.
-for(const a of $$('main#main-content a[href]')){
-let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}
-if(u.origin===location.origin&&/^\/profiles\/students\/[^/]+\/?$/.test(u.pathname)&&!studentRe.test(u.pathname))urls.set(u.href,u);
+// Some Wilma instances use a separate /all directory route.
+for(const a of directoryLinks){
+  let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}
+  if(u.origin===location.origin&&/^\/profiles\/students\/all\/?$/i.test(u.pathname))urls.set(u.href,u);
 }
-const queue=[...urls.values()].slice(0,38);let at=0,finished=0,failed=0;
+const queue=[...urls.values()].slice(0,38);
+if(!queue.length){say('Kaikki- tai aakkosluettelon linkkejä ei löytynyt. Ohjaamasi tai valvomasi opiskelijat -osion nimiä ei lisätä automaattisesti.',true);return}
+let at=0,finished=0,failed=0;
 async function worker(){while(at<queue.length){const u=queue[at++];try{const r=await fetch(u.href,{credentials:'same-origin'});if(!r.ok)throw Error('HTTP '+r.status);readNames(new DOMParser().parseFromString(await r.text(),'text/html'))}catch(e){failed++;console.warn('[OpiskelijaHaku] Opiskelijaluetteloa ei saatu:',e)}finished++;directoryStatus.textContent='Luettelot '+finished+'/'+queue.length+' · opiskelijoita '+directory.size;if(finished%4===0)renderChoices()}}
 await Promise.all(Array.from({length:Math.min(4,queue.length)},worker));
 directoryLoaded=true;renderChoices();say('Opiskelijaluettelo ladattu: '+directory.size+' opiskelijaa.'+(failed?' '+failed+' sivua ei voitu hakea.':''));
