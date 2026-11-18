@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.2.2
+// @version      0.2.3
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -26,7 +26,7 @@ const li=make('li');li.id='oh-tab';const link=make('a','', 'OpiskelijaHaku');lin
 const panel=make('section');panel.id='oh-panel';panel.hidden=true;native.insertAdjacentElement('afterend',panel);
 let active=false,abort=null,rows=[],picked=new Map(),directory=new Map(),directoryLoading=false,directoryLoaded=false;
 function changeTab(enabled){active=enabled;panel.hidden=!enabled;native.style.display=enabled?'none':'';li.classList.toggle('active',enabled);link.setAttribute('aria-selected',String(enabled))}
-link.onclick=e=>{e.preventDefault();$('li.active',tabs).forEach(n=>n.classList.remove('active'));changeTab(true);renderChoices()};
+link.onclick=e=>{e.preventDefault();$$('li.active',tabs).forEach(n=>n.classList.remove('active'));changeTab(true);renderChoices()};
 tabs.addEventListener('click',e=>{if(!e.target.closest('#oh-tab')&&e.target.closest('a'))changeTab(false)});
 panel.append(make('h2','','OpiskelijaHaku'),make('p','oh-help','Suodata Wilman opiskelijaluetteloa nimellä ja valitse opiskelijat napsauttamalla. Voit valita useita opiskelijoita.'));
 const chooser=make('div','oh-chooser'),chooserLabel=make('label'),filter=make('input');
@@ -68,12 +68,12 @@ if(directoryLoading)return;
 directoryLoading=true;refresh.disabled=true;renderChoices();say('Ladataan Wilman opiskelijaluetteloa…');
 try{
 const urls=new Map();
-for(const a of $('main#main-content ul.nav.nav-tabs-primary a[href]')){
+for(const a of $$('main#main-content ul.nav.nav-tabs-primary a[href]')){
 let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}
 if(u.origin===location.origin&&/^\/profiles\/students\/[^/]+\/?$/.test(u.pathname)&&!studentRe.test(u.pathname))urls.set(u.href,u);
 }
 // The alphabetical filter links are located inside the content pane on "Kaikki" too.
-for(const a of $('main#main-content a[href]')){
+for(const a of $$('main#main-content a[href]')){
 let u;try{u=new URL(a.getAttribute('href'),location.href)}catch{continue}
 if(u.origin===location.origin&&/^\/profiles\/students\/[^/]+\/?$/.test(u.pathname)&&!studentRe.test(u.pathname))urls.set(u.href,u);
 }
