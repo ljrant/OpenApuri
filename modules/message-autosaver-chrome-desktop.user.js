@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WilmaTools - Message Autosaver (Chrome Desktop)
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.16.11
+// @version      0.16.12
 // @description  Chrome desktop local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
@@ -748,6 +748,54 @@
       const snapshot=getRecipientsSnapshot(),visible=normalizeText(snapshot.text||'');
       return {selected:selected.filter(x=>visible.includes(normalizeText(x))),missing:[...new Set([...missing,...selected.filter(x=>!visible.includes(normalizeText(x)))])]};
     }
+    async function selectTeachersFromProfiles(teachers){
+      // Timetable teacher labels are sometimes short abbreviations; use their
+      // stable profile IDs if Wilma exposes these IDs on the actual picker.
+      const targets=[...new Map((teachers||[]).filter(t=>/^\d+$/.test(String(t?.id||''))).map(t=>[String(t.id),t])).values()];
+      if(!targets.length)return {ok:false,missing:['Opettajien profiilitunnisteet puuttuvat']};
+      if(!await openRecipientsPanel())return {ok:false,missing:['Wilman vastaanottajavalitsinta ei voitu avata']};
+      const missing=[];
+      for(const teacher of targets){
+        const id=String(teacher.id),name=String(teacher.name||'').trim();
+        const search=$(SEL.recipientsSearchInput);
+        if(search){
+          // Use a real input event to notify Wilma's reactive search logic.
+          const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
+          if(setter)setter.call(search,name.length>=5?name:id);
+          else search.value=name.length>=5?name:id;
+          search.dispatchEvent(new Event('input',{bubbles:true}));
+          search.dispatchEvent(new Event('change',{bubbles:true}));
+          await sleep(850);
+        }
+        const buttons=$all(SEL.recipientButtons).filter(b=>b.getClientRects().length&&!b.closest('#wt-message-library')&&
+          (b.matches('.teacher-block,.personnel-block')||b.closest('#recipients-search-results')));
+        const matches=buttons.filter(b=>{
+          // Never use numeric substring matching: only a whole teacher ID
+          // in a recipient-specific attribute or a teacher profile link.
+          const attrs=['data-recipient-id','data-teacher-id','data-person-id','data-id','value'];
+          const byId=attrs.some(k=>{
+            const v=b.getAttribute(k)||'';
+            return v===id||v==='r_teacher_'+id||v==='r_teacher-'+id;
+          });
+          const link=b.querySelector('a[href*="/profiles/teachers/"]');
+          const byLink=link&&new RegExp('/profiles/teachers/'+id+'(?:/|$)').test(link.getAttribute('href')||'');
+          if(byId||byLink)return true;
+          const sig=getRecipientButtonSignature(b);
+          const fullName=normalizeText(name);
+          return name.length>=5&&[sig.text,sig.title,sig.ariaLabel].some(v=>v===fullName);
+        });
+        if(matches.length!==1){missing.push(name||'Opettaja '+id);continue}
+        matches[0].click();
+        await sleep(250);
+      }
+      if(!missing.length)await clickSummaryOrCloseButtons();
+      // Selection happens through Wilma controls, not by injecting fields.
+      const snapshot=getRecipientsSnapshot();
+      if(!snapshot.text&&!snapshot.inputs.length){
+        return {ok:false,missing:targets.map(t=>t.name||'Opettaja '+t.id)};
+      }
+      return {ok:missing.length===0,missing};
+    }
     function getTemplates(){return safeRead(TEMPLATE_KEY,[]).filter(x=>x&&typeof x.title==='string').slice(0,150)}
     async function selectTemplateGroups(item){
       const groups=item.recipientGroups||[],missing=[];
@@ -967,9 +1015,11 @@
         }
         const task=request.recipientClassId
           ?selectClassRecipients(request.recipientClassId,request.recipientType)
-          :request.recipientRule==='opettajat'&&Array.isArray(request.recipientsNames)&&request.recipientsNames.length
-            ?selectRecipientsByNames(request.recipientsNames).then(result=>({ok:result.missing.length===0,missing:result.missing}))
-            :Promise.resolve({ok:true,missing:[]});
+          :request.recipientRule==='opettajat'&&Array.isArray(request.recipientTeachers)&&request.recipientTeachers.length
+            ?selectTeachersFromProfiles(request.recipientTeachers)
+            :request.recipientRule==='opettajat'&&Array.isArray(request.recipientsNames)&&request.recipientsNames.length
+              ?selectRecipientsByNames(request.recipientsNames).then(result=>({ok:result.missing.length===0,missing:result.missing}))
+              :Promise.resolve({ok:true,missing:[]});
         task.then(result=>{
           if(!result.ok){
             library();const pane=document.getElementById('wt-message-library');
