@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WilmaTools - Message Autosaver (Chrome Desktop)
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.16.10
+// @version      0.16.11
 // @description  Chrome desktop local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
@@ -967,7 +967,9 @@
         }
         const task=request.recipientClassId
           ?selectClassRecipients(request.recipientClassId,request.recipientType)
-          :Promise.resolve({ok:true,missing:[]});
+          :request.recipientRule==='opettajat'&&Array.isArray(request.recipientsNames)&&request.recipientsNames.length
+            ?selectRecipientsByNames(request.recipientsNames).then(result=>({ok:result.missing.length===0,missing:result.missing}))
+            :Promise.resolve({ok:true,missing:[]});
         task.then(result=>{
           if(!result.ok){
             library();const pane=document.getElementById('wt-message-library');
