@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.6.5
+// @version      0.6.6
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
@@ -612,7 +612,7 @@ const recipientPanel=make('div','oh-recipient-panel');recipientPanel.hidden=true
 recipientPanel.style.cssText='padding:10px;margin:6px 0 12px;border:1px solid #cad7df;border-radius:6px';
 const kinds={};
 for(const [kind,label,defaultChecked] of [
-  ['students','Valitut opiskelijahenkilöt',true],
+  ['students','Opiskelijat',true],
   ['courseStudents','Valittujen opintojaksojen opiskelijat',false],
   ['teachers','Opettajat',false],
   ['guardians','Huoltajat',false]
