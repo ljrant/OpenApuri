@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.6.0
+// @version      0.6.1
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
@@ -41,16 +41,16 @@ if(homePage){
   panel.style.cssText='background:#fff;border:1px solid #c6d8e3;border-radius:7px;padding:12px;margin:12px 0;box-shadow:0 1px 5px #00000012';
   const heading=make('h2','','Opiskelija- ja opettajahaku');heading.style.cssText='font-size:19px;margin:0 0 9px';
   const controls=make('div');controls.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:8px';
-  const type=make('select');type.setAttribute('aria-label','Haettava henkilöryhmä');
+  const type=make('select');type.style.cssText='padding:7px;border:1px solid #c3d2dc;border-radius:4px';type.setAttribute('aria-label','Haettava henkilöryhmä');
   for(const [value,label] of [['students','Opiskelijat'],['teachers','Opettajat']]){
     const opt=make('option','',label);opt.value=value;type.append(opt);
   }
   const q=make('input');q.type='search';q.placeholder='Hae nimellä…';q.setAttribute('aria-label','Hae henkilöä');
   q.style.cssText='flex:1;min-width:160px;max-width:430px;padding:7px';
-  const go=make('button','oh-action','Hae');
-  const expand=make('button','','Laajenna haku');
+  const go=make('button','oh-action','Hae');go.style.cssText='padding:7px 12px;cursor:pointer;background:#176393;color:white;border:0;border-radius:4px';
+  const expand=make('button','','Laajenna haku');expand.style.cssText='padding:7px 12px;cursor:pointer;background:#fff;border:1px solid #b9cbd7;border-radius:4px';
   const frameHolder=make('div');frameHolder.hidden=true;
-  const frame=make('iframe');frame.title='Laajennettu opiskelija- ja opettajahaku';frame.style.cssText='width:100%;height:680px;border:1px solid #dde6eb;border-radius:5px;margin-top:10px;background:#fff';
+  const frame=make('iframe');frame.title='Laajennettu opiskelija- ja opettajahaku';frame.setAttribute('loading','lazy');frame.style.cssText='width:100%;height:680px;border:1px solid #dde6eb;border-radius:5px;margin-top:10px;background:#fff';
   const url=()=>{
     const u=new URL('/profiles/students/',location.origin);
     u.searchParams.set('oh_type',type.value);
@@ -136,7 +136,7 @@ const fragment=document.createDocumentFragment();
 for(const person of visible){
 const b=make('button','oh-choice'+(picked.has(personKey(person))?' oh-chosen':''),(picked.has(personKey(person))?'✓  ':'')+person.name);
 b.type='button';b.setAttribute('role','option');b.setAttribute('aria-selected',String(picked.has(personKey(person))));
-b.onclick=()=>{if(picked.has(personKey(person)))picked.delete(personKey(person));else if(picked.size<20)picked.set(personKey(person),person);else{say('Enintään 20 opiskelijaa kerrallaan.',true);return}renderPicked();renderChoices()};
+b.onclick=()=>{if(picked.has(personKey(person)))picked.delete(personKey(person));else if(picked.size<20)picked.set(personKey(person),person);else{say('Enintään 20 henkilöä kerrallaan.',true);return}renderPicked();renderChoices()};
 fragment.append(b);
 }
 choices.append(fragment);
@@ -185,9 +185,11 @@ async function readDirectory(force=false){
       }
     }
     await Promise.all(Array.from({length:Math.min(4,queue.length)},worker));
-    if(teacherMode)teacherDirectoryLoaded=true;else directoryLoaded=queue.length>0;
+    if(teacherMode)teacherDirectoryLoaded=store.size>0||queue.length>0;else directoryLoaded=queue.length>0;
     if(!queue.length&&!teacherMode){
       say('Opiskelijaluettelon Kaikki-/aakkoslinkkejä ei löytynyt. Ohjaamasi opiskelijat -osiota ei käytetä hakulähteenä.',true);
+    }else if(teacherMode&&!store.size){
+      say('Opettajaluettelosta ei löytynyt luettavia profiililinkkejä. Opettajat voivat olla Wilman käyttöoikeuksilla rajattuja.',true);
     }else say('Luettelo ladattu: '+store.size+' henkilöä.'+(failed?' '+failed+' sivua ei voitu avata.':''),failed>0);
   }catch(e){say('Luettelon lataus epäonnistui: '+e.message,true)}
   finally{directoryLoading=false;refresh.disabled=false;renderChoices()}
@@ -300,8 +302,11 @@ const genericTitle=/^(opintojakso|kurssi|course|oppiaine|subject|näytä|avaa)$/
 const course=longCourse&&!genericTitle.test(longCourse)&&longCourse.length>=shortCourse.length?longCourse:shortCourse;
 if(!course)continue;
 const group=clean($(':scope > .class',block)?.textContent);
-const roomNode=$(':scope > .info .rooms',block)||$(':scope > .info .room',block)||$('.rooms',block)||$('.room',block)||$('a[href*="/profiles/rooms/"]',block)||$('a[href*="/profiles/facilities/"]',block);
-const room=clean(roomNode?.getAttribute('title')||roomNode?.textContent||'');
+const roomNode=$(':scope > .info .rooms',block)||$(':scope > .info .room',block)||
+  $('a.rooms',block)||$('a.room',block)||$('.rooms',block)||$('.room',block)||
+  $('a[href*="/profiles/rooms/"]',block)||$('a[href*="/profiles/facilities/"]',block)||
+  $('a[href*="/profiles/classrooms/"]',block)||$('[data-room]',block);
+const room=clean(roomNode?.getAttribute('title')||roomNode?.getAttribute('data-room')||roomNode?.textContent||'');
 foundCourses++;
 const moment=blockMoment(block,week);
 if((!moment.date||!moment.time)&&block.isConnected){
