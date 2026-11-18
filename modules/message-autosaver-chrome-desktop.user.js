@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WilmaTools - Message Autosaver (Chrome Desktop)
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.16.14
+// @version      0.16.15
 // @description  Chrome desktop local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
@@ -853,6 +853,32 @@
         }else if(item.recipients){restoreRecipients(item.recipients).catch(err=>console.warn('[WilmaTools] Pohjan vastaanottajat:',err))}
       }catch(err){if(err.message!=='Käyttö peruttu')alert(err.message)}
     }
+    const NATIVE_RECIPIENT_PARAMS=new Set(['r_student','r_teacher','r_personnel','r_guardian','r_class','r_classguardian']);
+    function draftRecipientParams(item){
+      const params=new URLSearchParams();
+      for(const raw of item?.recipientQuery||[]){
+        const [key,value]=String(raw).split('=');
+        if(NATIVE_RECIPIENT_PARAMS.has(key)&&/^\d+$/.test(value||''))params.append(key,value);
+      }
+      return params;
+    }
+    function switchToDraft(draft){
+      if(!draft)return;
+      // A new compose document is essential: Wilma's recipient picker does not
+      // expose a reliable clear-all operation. Never leave prior draft recipients.
+      const params=draftRecipientParams(draft);
+      const target='/messages/compose'+([...params].length?'?'+params.toString():'');
+      localStorage.setItem('wilmatools.draftRestore.v1',JSON.stringify({
+        subject:String(draft.subject||''),
+        bodyHtml:String(draft.bodyHtml||draft.body||''),
+        recipients:[...params].length?null:(draft.recipients||null),
+        createdAt:Date.now(),
+        replaceRecipients:true
+      }));
+      // Pause autosave of the outgoing draft while navigating.
+      if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
+      location.assign(target);
+    }
     function applySaved(item,withRecipients){
       if(!item)return;
       // Templates and drafts both use the same editor setter.
@@ -926,9 +952,9 @@
         const select=document.createElement('select');select.style.cssText='width:100%;max-width:100%;padding:8px;border:1px solid #b9cbd9;border-radius:5px';
         const placeholder=label('option','Valitse tallenne…');placeholder.value='';select.append(placeholder);
         drafts.forEach((item,i)=>{const date=new Date(item.time||item.savedAt);const when=Number.isNaN(date.getTime())?'':date.toLocaleString('fi-FI');const option=label('option',(item._latest?'Viimeisin automaattitallenne':'Luonnos')+' · '+(item.subject||'Nimetön')+' · '+when);option.value=String(i);select.append(option)});
-        select.onchange=()=>{if(select.value==='')return;const draft=drafts[Number(select.value)];if(!draft)return;applySaved(draft,false);select.value='';};
+        select.onchange=()=>{if(select.value==='')return;const draft=drafts[Number(select.value)];if(!draft)return;switchToDraft(draft)};
         aside.append(heading,select);
-        const count=label('p',drafts.length+' tallennetta. Valinta palauttaa otsikon ja tekstin muuttamatta vastaanottajia.');count.style.cssText='font-size:12px;color:#607080;margin:8px 0';aside.append(count);
+        const count=label('p',drafts.length+' tallennetta. Valinta vaihtaa myös vastaanottajat. Wilma avaa viestin uudelleen, jotta edellisen luonnoksen vastaanottajat eivät jää valituiksi.');count.style.cssText='font-size:12px;color:#607080;margin:8px 0';aside.append(count);
        }else{
         const data=getTemplates(),cats=['Kaikki',...new Set(data.flatMap(templateCats))].sort((a,b)=>a==='Kaikki'?-1:b==='Kaikki'?1:a.localeCompare(b,'fi'));
         const search=label('input','');search.type='search';search.placeholder='Hae viestipohjia…';search.setAttribute('aria-label','Hae viestipohjia');search.style.cssText='width:100%;padding:8px;margin:6px 0;border:1px solid #b9cbd9;border-radius:5px';
@@ -1023,7 +1049,15 @@
       document.getElementById('wt-library-entry')?.remove();
       library();
       const savedRestore=safeRead('wilmatools.draftRestore.v1',null);
-      if(savedRestore&&Date.now()-savedRestore.createdAt<120000){localStorage.removeItem('wilmatools.draftRestore.v1');applySaved(savedRestore,false)}
+      if(savedRestore&&Date.now()-savedRestore.createdAt<120000){
+        localStorage.removeItem('wilmatools.draftRestore.v1');
+        applySaved(savedRestore,false);
+        // Native URL parameters are preferred. Historical snapshots are
+        // restored only on a freshly cleared compose page.
+        if(savedRestore.replaceRecipients&&savedRestore.recipients){
+          restoreRecipients(savedRestore.recipients).catch(e=>console.warn('[WilmaTools] Draft recipients:',e));
+        }
+      }
       const request=safeRead(REQUEST_KEY,null);
       if(request&&Date.now()-request.createdAt<120000){
         localStorage.removeItem(REQUEST_KEY);
@@ -1129,7 +1163,7 @@
             if (!ok) return;
         }
 
-        applySaved(draft,true);
+        switchToDraft(draft);
         const bodyLen=stripHtml(draft.bodyHtml||'').trim().length;
         setIndicator('Wilma Autosaver: restored draft | body '+bodyLen+' chars','ok');
         updateInfo();
