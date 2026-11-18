@@ -12,7 +12,7 @@ Asenna Tampermonkey ja haluamasi skriptit. Tietokoneella sivupaneeli ja varsinai
 | --- | --- | --- |
 | WilmaTools-sivupaneeli (tietokone) | 0.20.2 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/desktop-toolbar.user.js) |
 | Ryhmänohjaajan opintoseuranta | 0.20.2 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/WilmaTools.user.js) |
-| OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.2.1 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) |
+| OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.2.4 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) |
 | Viestiluonnosten tallennus – Chrome tietokoneella | 0.12.4 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/message-autosaver-chrome-desktop.user.js) |
 | Viestiluonnosten tallennus – Firefox Androidissa (kokeellinen) | 0.6.0 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/message-autosaver-firefox-android.user.js) |
 
@@ -54,7 +54,9 @@ Chrome-tietokoneversion automaattitallennin säilyttää viestin aiheen, sisäll
 Firefox Android -versio on **kokeellinen**, toimii vain Androidin Firefox-selaimessa ja tarvitsee yhteensopivan käyttäjäskriptilaajennuksen. Katso [erilliset ohjeet](https://ljrant.github.io/WilmaTools/firefox-android.html).
 
 
-## OpiskelijaHaku (v0.2.1)
+## OpiskelijaHaku (v0.2.4)
+
+OpiskelijaHaku-välilehti näkyy myös opiskelijakohtaisilla `/profiles/students/...`-alisivuilla: alisivulta se avaa opiskelijaluettelon OpiskelijaHaku-välilehden. Haku itsessään sijaitsee edelleen luettelon pääsivulla.
 
 Erillinen Tampermonkey-skripti [**OpiskelijaHaku**](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) lisää Wilman `/profiles/students`-luetteloon oman välilehden. Suodata opiskelijaluetteloa nimellä ja napsauta halutut opiskelijat monivalintaan. Valitse alkamis- ja päättymispäivä sekä tarvittaessa kellonaikaväli. Työkalu hakee kirjautuneessa Wilma-istunnossa `/profiles/students/{id}/schedule?date=D.M.YYYY` -työjärjestysviikot ja kokoaa `.block`-merkinnöistä opintojaksot sekä niiden `.teachers`-linkeistä opettajat. Toistuvat viikot yhdistetään tulostaulukossa, josta voi valita viestin kohteena olevia opintojaksorivejä.
 
