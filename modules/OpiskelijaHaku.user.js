@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.5.5
+// @version      0.5.6
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -268,11 +268,16 @@ function parseExportSchedule(data,person,week,from,to,clockRange){
   }
   return out;
 }
+let exportNotAvailable=false;
 async function tryExportSchedule(person,week,from,to,clockRange,signal){
+  if(exportNotAvailable)return null;
   const url=new URL('/schedule/export/students/'+encodeURIComponent(person.id)+'/',location.origin);
   url.searchParams.set('date',fi(week));
   const response=await fetch(url.href,{credentials:'same-origin',signal,headers:{Accept:'application/json'}});
-  if(!response.ok)return null;
+  if(!response.ok){
+    if(response.status===401||response.status===403||response.status===404)exportNotAvailable=true;
+    return null;
+  }
   const raw=await response.text();
   // Older Wilma instances may return JSON with text/html or text/plain.
   if(!/^\s*\{/.test(raw))return null;
