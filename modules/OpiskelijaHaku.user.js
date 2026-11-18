@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.5.0
+// @version      0.5.1
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -273,38 +273,36 @@ async function guardianRecipients(students){
   }
   return {ids:[...confirmed],missing};
 }
-async function composeForSelection(courseRows,kinds,button){
-  if(!courseRows.length){say('Valitse vähintään yksi opintojaksorivi.',true);return}
-  if(!kinds.students&&!kinds.teachers&&!kinds.guardians){say('Valitse vähintään yksi vastaanottajaryhmä.',true);return}
-  const students=uniquePeople(courseRows.map(r=>r.person));
-  const teachers=uniquePeople(courseRows.flatMap(r=>r.teachers));
-  if(kinds.teachers&&!teachers.length){say('Valituilla opintojaksoilla ei ole opettajatunnisteita. Viestiä ei avattu.',true);return}
-  const url=new URL('/messages/compose',location.origin);
-  // Reserve a tab synchronously so popup blockers do not discard guardian searches.
-  const messageWindow=kinds.guardians?window.open('about:blank','_blank'):null;
-  if(kinds.guardians&&!messageWindow){say('Selain esti uuden välilehden. Salli ponnahdusikkunat Wilmalle ja kokeile uudelleen.',true);return}
-  if(kinds.students)for(const p of students)url.searchParams.append('r_student',String(p.id));
-  if(kinds.teachers)for(const p of teachers)url.searchParams.append('r_teacher',String(p.id));
-  if(kinds.guardians){
-    button.disabled=true;
-    say('Varmistetaan huoltajien vastaanottajatunnukset Wilman omista viestilinkeistä…');
-    try{
-      const guardians=await guardianRecipients(students);
-      if(guardians.missing.length){
-        messageWindow?.close();say('Huoltajien vastaanottajatunnuksia ei löytynyt seuraaville opiskelijoille: '+guardians.missing.join(', ')+'. Viestiä ei avattu, jotta vastaanottajia ei jää vahingossa pois.',true);
-        return;
-      }
-      if(!guardians.ids.length){messageWindow?.close();say('Huoltajien viestilinkkejä ei löytynyt. Viestiä ei avattu.',true);return}
-      guardians.ids.forEach(id=>url.searchParams.append('r_guardian',id));
-    }catch(e){messageWindow?.close();say('Huoltajien tunnistaminen epäonnistui: '+e.message,true);return}
-    finally{button.disabled=false}
-  }
-  if(!url.search){say('Vastaanottajia ei löytynyt.',true);return}
-  if(messageWindow){
-    try{messageWindow.opener=null;messageWindow.location.replace(url.href)}
-    catch(e){messageWindow.close();say('Viestisivun avaaminen epäonnistui.',true);return}
-  }else window.open(url.href,'_blank','noopener');
-  say('Wilman viestinkirjoitus avattu. Tarkista, että kaikki opiskelijat, opettajat ja huoltajat näkyvät vastaanottajina ennen lähettämistä.');
+async function composeForSelection(courseRows,kinds,button,options={}){
+ if(!courseRows.length){say('Valitse vähintään yksi opintojakso.',true);return}
+ if(!kinds.students&&!kinds.teachers&&!kinds.guardians){say('Valitse vastaanottajaryhmä.',true);return}
+ const students=uniquePeople(courseRows.map(r=>r.person)),teachers=uniquePeople(courseRows.flatMap(r=>r.teachers));
+ const url=new URL('/messages/compose',location.origin);
+ const tab=kinds.guardians?window.open('about:blank','_blank'):null;
+ if(kinds.guardians&&!tab){say('Selain esti uuden viesti-ikkunan.',true);return}
+ if(kinds.students)students.forEach(p=>url.searchParams.append('r_student',String(p.id)));
+ if(kinds.teachers)teachers.forEach(p=>url.searchParams.append('r_teacher',String(p.id)));
+ const missing=[];
+ if(kinds.teachers&&!teachers.length)missing.push('Opettajien tunnisteita ei löytynyt');
+ if(kinds.guardians){
+   button.disabled=true;say('Haetaan huoltajien vastaanottajatietoja…');
+   try{const g=await guardianRecipients(students);g.ids.forEach(id=>url.searchParams.append('r_guardian',id));missing.push(...g.missing.map(name=>'Huoltaja ei löytynyt: '+name))}
+   catch(e){missing.push('Huoltajien haku epäonnistui')}
+   finally{button.disabled=false}
+ }
+ if(!url.search){tab?.close();say('Vastaanottajia ei löytynyt. '+missing.join('; '),true);return}
+ const names=options.addNames?'Valitut opiskelijat:\n'+students.map(p=>p.name).join('\n'):'';
+ const body=[String(options.body||''),names].filter(Boolean).join('\n\n');
+ const transfer={
+   createdAt:Date.now(),subject:String(options.subject||''),body,
+   bodyHtml:options.bodyHtml||'',
+   missingRecipients:missing,
+   recipientQuery:[...url.searchParams].map(([key,val])=>key+'='+val)
+ };
+ localStorage.setItem('wilmatools.composeRequest.v1',JSON.stringify(transfer));
+ if(tab){try{tab.opener=null;tab.location.replace(url.href)}catch(e){tab.close();say('Viestin avaus epäonnistui.',true);return}}
+ else window.open(url.href,'_blank','noopener');
+ say('Wilman viestinkirjoitus avattu.'+(missing.length?' Huomautus näytetään viestisivulla: '+missing.join('; '):''),missing.length>0);
 }
 function renderResults(){
 results.replaceChildren();
@@ -324,6 +322,32 @@ for(const [kind,label,defaultChecked] of [
   const cb=make('input');cb.type='checkbox';cb.checked=defaultChecked;cb.style.width='auto';
   kinds[kind]=cb;option.append(cb,make('span','',label));recipientPanel.append(option);
 }
+const addNames=make('input');addNames.type='checkbox';addNames.style.width='auto';
+const namesLabel=make('label');namesLabel.style.cssText='display:flex;flex-direction:row;align-items:center;gap:8px;margin:7px 0';
+namesLabel.append(addNames,make('span','','Lisää valittujen opiskelijoiden nimet viestitekstiin'));
+recipientPanel.append(namesLabel);
+const templateSelect=make('select');templateSelect.style.cssText='width:100%;padding:7px;margin:6px 0';
+const titleInput=make('input');titleInput.placeholder='Viestin otsikko';titleInput.style.margin='5px 0';
+const messageBody=make('textarea');messageBody.rows=4;messageBody.placeholder='Viestin sisältö';messageBody.style.cssText='width:100%;min-height:72px;margin:5px 0';
+let templateHtml='',templateText='';
+const getSaved=(key)=>{try{const data=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(data)?data:[]}catch{return []}};
+let templates=[];
+function reloadTemplates(){
+ templates=[
+ ...getSaved('wilmatools.messageTemplates.v1').filter(t=>t?.title).map(t=>({name:'Pohja: '+t.title,subject:t.subject||'',body:t.body||'',html:t.bodyHtml||''})),
+ ...getSaved('wilmatools.draftHistory.v1').filter(t=>t?.subject).map(t=>({name:'Luonnos: '+t.subject,subject:t.subject||'',body:t.bodyHtml||'',html:t.bodyHtml||''}))];
+ templateSelect.replaceChildren();const first=make('option','','Valitse viestipohja tai tallennettu luonnos');first.value='';templateSelect.append(first);
+ templates.forEach((t,i)=>{const el=make('option','',t.name);el.value=String(i);templateSelect.append(el)});
+}
+reloadTemplates();
+templateSelect.onchange=()=>{
+ if(templateSelect.value==='')return;
+ const t=templates[Number(templateSelect.value)];if(!t)return;
+ titleInput.value=t.subject;const safe=make('div');safe.innerHTML=t.html||t.body;templateText=safe.textContent||t.body;
+ messageBody.value=templateText;templateHtml=t.html;
+};
+const refreshTemplates=make('button','','Päivitä tallennetut pohjat');refreshTemplates.onclick=reloadTemplates;
+recipientPanel.append(make('strong','','Viestipohjat ja tallennetut luonnokset'),templateSelect,refreshTemplates,titleInput,messageBody);
 const openMessage=make('button','oh-action','Avaa viesti Wilmassa');
 openMessage.style.display='block';
 recipientPanel.append(openMessage,make('p','oh-help','Valitse yksi tai useampi vastaanottajaryhmä. Viestiä ei lähetetä automaattisesti. Tarkista vastaanottajat Wilmassa.'));
@@ -359,7 +383,8 @@ row.append(teacherCell,lessonCell);body.append(row);
 }
 results.append(make('p','oh-help','Opintojakso näkyy opiskelijaa kohden vain kerran. Ryhmämerkintöjä ei esitetä opintojakson niminä. Ajanjakson reunaviikot voivat sisältää myös sen ulkopuolisia opetuspäiviä.'));
 const chosen=()=>[...selected].map(i=>rows[i]).filter(Boolean);
-openMessage.onclick=()=>composeForSelection(chosen(),{students:kinds.students.checked,teachers:kinds.teachers.checked,guardians:kinds.guardians.checked},openMessage);
+openMessage.onclick=()=>composeForSelection(chosen(),{students:kinds.students.checked,teachers:kinds.teachers.checked,guardians:kinds.guardians.checked},openMessage,
+{addNames:addNames.checked,subject:titleInput.value,body:messageBody.value,bodyHtml:templateHtml&&messageBody.value===templateText?templateHtml:''});
 }
 
 renderPicked();renderChoices();
