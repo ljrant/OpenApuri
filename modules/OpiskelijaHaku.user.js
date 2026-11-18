@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.2.4
+// @version      0.3.0
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @run-at       document-idle
@@ -15,7 +15,14 @@ const directoryPage=/^\/profiles\/students\/?$/.test(location.pathname);
 if(!/^\/profiles\/students(?:\/|$)/.test(location.pathname)||document.getElementById('oh-tab'))return;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e};
-const clean=s=>String(s||'').trim().replace(/\s+/g,' '),norm=s=>clean(s).toLocaleLowerCase('fi');
+const clean=s=>String(s||'').trim().replace(/\s+/g,' ');
+const norm=s=>clean(s).normalize('NFKC').toLocaleLowerCase('fi-FI');
+const nameMatches=(name,query)=>{
+  const words=norm(query).replace(/[,]+/g,' ').split(/\s+/).filter(Boolean);
+  if(!words.length)return true;
+  const parts=norm(name).replace(/[,]+/g,' ').split(/\s+/).filter(Boolean);
+  return words.every(w=>parts.some(p=>p.startsWith(w)));
+};
 const studentRe=/^\/profiles\/students\/(\d+)\/?$/,teacherRe=/^\/profiles\/teachers\/(\d+)\/?$/;
 const pad=n=>String(n).padStart(2,'0'),iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),fi=d=>d.getDate()+'.'+(d.getMonth()+1)+'.'+d.getFullYear();
 const parseDate=v=>{const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(v||'');if(!m)return null;const d=new Date(+m[1],+m[2]-1,+m[3],12);return d.getFullYear()===+m[1]&&d.getMonth()===+m[2]-1&&d.getDate()===+m[3]?d:null};
@@ -58,7 +65,7 @@ readNames(document);
 function renderChoices(){
 choices.replaceChildren();
 const q=norm(filter.value);
-const matches=[...directory.values()].filter(p=>norm(p.name).includes(q)).sort((a,b)=>a.name.localeCompare(b.name,'fi'));
+const matches=[...directory.values()].filter(p=>nameMatches(p.name,q)).sort((a,b)=>a.name.localeCompare(b.name,'fi'));
 const visible=matches.slice(0,80);
 if(!visible.length){choices.append(make('div','oh-help',directoryLoading?'Opiskelijoita ladataan…':'Ei osumia.'));return}
 const fragment=document.createDocumentFragment();
@@ -107,21 +114,31 @@ const times=[...source.matchAll(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b/g)].map(m=>+m
 return {date,time:times.length>=2?{start:times[0],end:times[1]}:null};
 }
 function parseSchedule(html,person,week,from,to,clockRange){
-const doc=new DOMParser().parseFromString(html,'text/html');if(!$('#schedule-container',doc))throw Error('Työjärjestystä ei löytynyt');const out=[];
-for(const block of $$('#schedule .block',doc)){
-const course=clean($(':scope > span.class',block)?.textContent);if(!course)continue;
+const doc=new DOMParser().parseFromString(html,'text/html');
+const schedule=$('#schedule-container',doc)||$('#schedule',doc);
+if(!schedule)throw Error('Työjärjestyksen sisältö puuttuu haetusta sivusta (mahdollinen käyttöoikeus- tai kirjautumisongelma).');
+const blocks=$$('.block',schedule);
+if(!blocks.length)throw Error('Työjärjestysmerkintöjä ei löytynyt haetusta HTML:stä. Wilma saattaa luoda oppitunnit JavaScriptillä.');
+const out=[];let foundCourses=0,ignoredByDate=0,ignoredByTime=0;
+for(const block of blocks){
+const courseNode=$(':scope > .class',block)||$('.class',block)||$('[data-original-title]',block);
+const course=clean(courseNode?.textContent||courseNode?.getAttribute('data-original-title')||'');
+if(!course)continue;
+foundCourses++;
 const moment=blockMoment(block,week);
-if(moment.date&&(moment.date<from||moment.date>to))continue;
+if(moment.date&&(moment.date<from||moment.date>to)){ignoredByDate++;continue}
 if(clockRange){
-if(!moment.time){parseSchedule.unknownTimes=(parseSchedule.unknownTimes||0)+1;continue}
-if(moment.time.end<=clockRange.start||moment.time.start>=clockRange.end)continue;
+if(!moment.time){parseSchedule.unknownTimes=(parseSchedule.unknownTimes||0)+1;ignoredByTime++;continue}
+if(moment.time.end<=clockRange.start||moment.time.start>=clockRange.end){ignoredByTime++;continue}
 }
 const teachers=new Map();for(const a of $$('a.teachers[href]',block)){let u;try{u=new URL(a.href,location.href)}catch{continue}const m=teacherRe.exec(u.pathname);if(!m||u.origin!==location.origin)continue;teachers.set(m[1],{id:m[1],name:clean(a.getAttribute('title')||a.textContent)})}
 out.push({person,course,teachers:[...teachers.values()],week:iso(week),partial:!moment.date&&(week<from||new Date(week.getTime()+6*86400000)>to)});
 }
-return out;
+if(blocks.length&&foundCourses===0)throw Error('Työjärjestysmerkintöjä löytyi, mutta opintojaksotietoa ei tunnistettu.');
+// Genuine empty results are possible after applying date/time filters.
+return {rows:out,stats:{blocks:blocks.length,courses:foundCourses,ignoredByDate,ignoredByTime}};
 }
-async function runPool(tasks,signal,update){let next=0,done=0;const output=new Array(tasks.length);async function worker(){while(next<tasks.length&&!signal.aborted){const i=next++;try{output[i]={rows:await tasks[i]()}}catch(e){output[i]={error:e.message}}update(++done,tasks.length)}}await Promise.all(Array.from({length:Math.min(3,tasks.length)},worker));return output}
+async function runPool(tasks,signal,update){let next=0,done=0;const output=new Array(tasks.length);async function worker(){while(next<tasks.length&&!signal.aborted){const i=next++;try{const result=await tasks[i]();output[i]={rows:result.rows,stats:result.stats}}catch(e){output[i]={error:e.message}}update(++done,tasks.length)}}await Promise.all(Array.from({length:Math.min(3,tasks.length)},worker));return output}
 search.onclick=async()=>{
 if(abort)return;const from=parseDate(start.value),to=parseDate(end.value);
 const clockRange=useTime.checked?{start:fromTime.value,end:toTime.value}:null;
@@ -133,9 +150,15 @@ abort=new AbortController();const signal=abort.signal;search.disabled=true;cance
 const tasks=[...picked.values()].flatMap(p=>dates.map(d=>async()=>{const u=new URL('/profiles/students/'+p.id+'/schedule',location.origin);u.searchParams.set('date',fi(d));const response=await fetch(u,{credentials:'same-origin',signal});if(!response.ok)throw Error('HTTP '+response.status);return parseSchedule(await response.text(),p,d,from,to,clockRange)}));
 try{
 const output=await runPool(tasks,signal,(n,total)=>say('Haettu '+n+'/'+total+' työjärjestystä…'));
-const errors=output.filter(x=>x?.error).length,combined=new Map();
+const failed=output.filter(x=>x?.error);
+const errors=failed.length,combined=new Map();
+const totalBlocks=output.reduce((n,o)=>n+(o?.stats?.blocks||0),0);
+const totalCourses=output.reduce((n,o)=>n+(o?.stats?.courses||0),0);
 for(const o of output){if(!o?.rows)continue;for(const x of o.rows){const key=x.person.id+'|'+norm(x.course)+'|'+x.teachers.map(t=>t.id).sort().join(',');if(!combined.has(key))combined.set(key,{...x,weeks:new Set(),partial:false});const item=combined.get(key);item.weeks.add(x.week);item.partial ||=x.partial}}
-rows=[...combined.values()].sort((a,b)=>a.person.name.localeCompare(b.person.name,'fi')||a.course.localeCompare(b.course,'fi'));renderResults();say((signal.aborted?'Keskeytetty. ':'Valmis. ')+rows.length+' opintojaksoriviä, '+errors+' epäonnistunutta hakua.'+(errors?' Tulos voi olla puutteellinen.':'')+(parseSchedule.unknownTimes?' '+parseSchedule.unknownTimes+' merkintää jätettiin pois, koska kellonaikaa ei voitu tunnistaa.':''),!!errors);
+rows=[...combined.values()].sort((a,b)=>a.person.name.localeCompare(b.person.name,'fi')||a.course.localeCompare(b.course,'fi'));
+renderResults();
+const firstError=failed[0]?.error||'';
+say((signal.aborted?'Keskeytetty. ':'Valmis. ')+rows.length+' opintojaksoa, työjärjestysmerkintöjä '+totalBlocks+', tunnistettuja opintojaksoja '+totalCourses+', epäonnistuneita viikkohakuja '+errors+'.'+(firstError?' Esimerkkivirhe: '+firstError:'')+(parseSchedule.unknownTimes?' '+parseSchedule.unknownTimes+' merkintää ilman tunnistettavaa kellonaikaa.':''),errors>0||totalBlocks===0);
 }catch(e){say('Hakuvirhe: '+e.message,true)}finally{abort=null;search.disabled=false;cancel.disabled=true}
 };
 function compose(list,type){
@@ -148,13 +171,30 @@ localStorage.setItem('wilmatools.composeRequest.v1',JSON.stringify({subject:'',b
 window.open(location.origin+'/messages/compose#wt-library','_blank','noopener');
 }
 function renderResults(){
-results.replaceChildren();if(!rows.length){results.append(make('p','','Opintojaksoja ei löytynyt.'));return}
-const controls=make('div'),students=make('button','','Viesti valituille opiskelijoille'),teachers=make('button','','Viesti opettajille');controls.append(students,teachers);results.append(controls);
-const table=make('table'),thead=make('thead'),head=make('tr');['Valitse','Opiskelija','Opintojakso / ryhmä','Opettajat','Viikkoja'].forEach(x=>head.append(make('th','',x)));thead.append(head);table.append(thead);
-const body=make('tbody'),selected=new Set(rows.map((_,i)=>i));
-rows.forEach((r,i)=>{const tr=make('tr'),cell=make('td'),cb=make('input');cb.type='checkbox';cb.checked=true;cb.setAttribute('aria-label','Valitse opintojaksorivi');cb.onchange=()=>cb.checked?selected.add(i):selected.delete(i);cell.append(cb);tr.append(cell,make('td','',r.person.name),make('td','',r.course));const tcell=make('td');if(!r.teachers.length)tcell.textContent='Opettaja ei ilmene';for(const teacher of r.teachers){const a=make('a','',teacher.name);a.href='/profiles/teachers/'+teacher.id;a.target='_blank';a.rel='noopener';tcell.append(a,document.createTextNode(' '))}tr.append(tcell,make('td','',String(r.weeks.size)+(r.partial?'*':'')));body.append(tr)});
-table.append(body);results.append(table,make('p','oh-help','* Ajanjakson ensimmäinen tai viimeinen työjärjestysviikko saattaa sisältää myös rajauksen ulkopuolisia päiviä. Tarkista vastaavuus Wilmassa.'));
-const chosen=()=>[...selected].map(i=>rows[i]);students.onclick=()=>compose(chosen().map(r=>r.person),'students');teachers.onclick=()=>compose(chosen().flatMap(r=>r.teachers),'teachers');
+results.replaceChildren();
+if(!rows.length){
+  results.append(make('p','oh-help','Näytettäviä opintojaksoja ei löytynyt. Tarkista alla oleva hakutilanne: jos työjärjestysmerkintöjä on nolla tai viikkohaku epäonnistui, kyseessä ei välttämättä ole tyhjä työjärjestys.'));
+  return;
+}
+const actions=make('div'),students=make('button','','Viesti opiskelijoille'),teachers=make('button','','Viesti opettajille');
+actions.append(students,teachers);results.append(actions);
+const table=make('table'),head=make('thead'),row=make('tr');
+['','Opiskelija','Opintojakso / ryhmä','Opettaja(t)'].forEach(v=>row.append(make('th','',v)));
+head.append(row);table.append(head);const body=make('tbody'),checked=new Set(rows.map((_,i)=>i));
+for(const [i,r] of rows.entries()){
+  const tr=make('tr'),first=make('td'),cb=make('input');cb.type='checkbox';cb.checked=true;cb.setAttribute('aria-label','Valitse rivi');
+  cb.onchange=()=>cb.checked?checked.add(i):checked.delete(i);first.append(cb);
+  tr.append(first,make('td','',r.person.name),make('td','',r.course));
+  const cell=make('td');
+  if(!r.teachers.length)cell.textContent='Ei opettajatietoa';
+  else for(const t of r.teachers){const a=make('a','',t.name);a.href='/profiles/teachers/'+t.id;a.target='_blank';a.rel='noopener';cell.append(a,document.createTextNode(' '))}
+  tr.append(cell);body.append(tr);
+}
+table.append(body);results.append(table);
+results.append(make('p','oh-help','Yksi rivi / opiskelija ja opintojakso. Työjärjestystiedot perustuvat valitun aikavälin viikkoihin; alku- ja loppuviikon yksittäiset päivät voivat vaatia tarkistuksen Wilmassa.'));
+const chosen=()=>[...checked].map(i=>rows[i]).filter(Boolean);
+students.onclick=()=>compose(chosen().map(r=>r.person),'students');
+teachers.onclick=()=>compose(chosen().flatMap(r=>r.teachers),'teachers');
 }
 renderPicked();renderChoices();
 if(location.hash==='#opiskelijahaku')link.click();
