@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.6.6
+// @version      0.6.7
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
@@ -666,7 +666,11 @@ const selected=new Set(rows.map((_,i)=>i));
 const onlyTeachers=rows.every(r=>r.person.type==='teacher');
 if(onlyTeachers){kinds.students.checked=false;kinds.courseStudents.checked=false;kinds.teachers.checked=true;kinds.guardians.checked=false}
 for(const {person,items} of byStudent.values()){
-  const section=make('section','oh-student-group'),heading=make('h3','',person.name);
+  const section=make('section','oh-student-group'),heading=make('h3');
+  const personLink=make('a','',person.name);
+  personLink.href='/profiles/'+(person.type==='teacher'?'teachers':'students')+'/'+encodeURIComponent(person.id);
+  personLink.target='_blank';personLink.rel='noopener noreferrer';
+  heading.append(personLink);
   if(person.type==='teacher'){
     const marker=make('span','oh-staff-tag','Ope');marker.style.cssText='margin-left:7px;font-size:11px;font-weight:400;color:#7a8994;opacity:.8';heading.append(marker);
   }
@@ -680,7 +684,23 @@ for(const {person,items} of byStudent.values()){
   for(const {r,i} of items){
     const row=make('tr'),pick=make('td'),cb=make('input');cb.type='checkbox';cb.checked=true;cb.setAttribute('aria-label','Valitse '+r.course);
     cb.onchange=()=>cb.checked?selected.add(i):selected.delete(i);pick.append(cb);
-    row.append(pick,make('td','',r.course));
+    const courseCell=make('td');
+    const groupLinks=[...(r.groupUrls||[])].filter(path=>/^\/(?:groups|profiles\/groups)\/\d+\/?$/.test(String(path)));
+    if(groupLinks.length){
+      const courseLink=make('a','',r.course);
+      courseLink.href=groupLinks[0];courseLink.target='_blank';courseLink.rel='noopener noreferrer';
+      courseCell.append(courseLink);
+      if(groupLinks.length>1){
+        const extra=make('span','', ' ');
+        for(let n=1;n<groupLinks.length;n++){
+          const a=make('a','', 'Ryhmä '+(n+1));
+          a.href=groupLinks[n];a.target='_blank';a.rel='noopener noreferrer';
+          extra.append(' ',a);
+        }
+        courseCell.append(extra);
+      }
+    }else courseCell.textContent=r.course;
+    row.append(pick,courseCell);
     const teacherCell=make('td');
     if(!r.teachers.length)teacherCell.textContent='Ei opettajatietoa';
     else for(const teacher of r.teachers){
