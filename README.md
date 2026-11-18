@@ -12,7 +12,7 @@ Asenna Tampermonkey ja haluamasi skriptit. Tietokoneella sivupaneeli ja varsinai
 | --- | --- | --- |
 | WilmaTools-sivupaneeli (tietokone) | 0.20.2 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/desktop-toolbar.user.js) |
 | Ryhmänohjaajan opintoseuranta | 0.20.2 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/WilmaTools.user.js) |
-| OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.2.0 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) |
+| OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.2.1 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) |
 | Viestiluonnosten tallennus – Chrome tietokoneella | 0.12.4 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/message-autosaver-chrome-desktop.user.js) |
 | Viestiluonnosten tallennus – Firefox Androidissa (kokeellinen) | 0.6.0 | [Asenna](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/message-autosaver-firefox-android.user.js) |
 
@@ -54,11 +54,11 @@ Chrome-tietokoneversion automaattitallennin säilyttää viestin aiheen, sisäll
 Firefox Android -versio on **kokeellinen**, toimii vain Androidin Firefox-selaimessa ja tarvitsee yhteensopivan käyttäjäskriptilaajennuksen. Katso [erilliset ohjeet](https://ljrant.github.io/WilmaTools/firefox-android.html).
 
 
-## OpiskelijaHaku (v0.2.0)
+## OpiskelijaHaku (v0.2.1)
 
 Erillinen Tampermonkey-skripti [**OpiskelijaHaku**](https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js) lisää Wilman `/profiles/students`-luetteloon oman välilehden. Suodata opiskelijaluetteloa nimellä ja napsauta halutut opiskelijat monivalintaan. Valitse alkamis- ja päättymispäivä sekä tarvittaessa kellonaikaväli. Työkalu hakee kirjautuneessa Wilma-istunnossa `/profiles/students/{id}/schedule?date=D.M.YYYY` -työjärjestysviikot ja kokoaa `.block`-merkinnöistä opintojaksot sekä niiden `.teachers`-linkeistä opettajat. Toistuvat viikot yhdistetään tulostaulukossa, josta voi valita viestin kohteena olevia opintojaksorivejä.
 
-**Hakurajat:** enintään 20 opiskelijaa, 16 viikon ajanjakso ja 120 työjärjestysverkkopyyntöä kerrallaan; enintään kolme rinnakkaista hakua. Opiskelijavalikko kokoaa nimiä Wilman luettelon ja aakkosluettelosivujen linkeistä; hakukenttä suodattaa listaa lennossa. Jos henkilöä ei löydy luettelosta tai nimellä on useita osumia, käyttäjän on tarkennettava hakua. Wilman erillisen nimihakurajapinnan tukea ei ole vielä vahvistettu.
+**Hakurajat:** enintään 20 opiskelijaa, 16 viikon ajanjakso ja 120 työjärjestysverkkopyyntöä kerrallaan; enintään kolme rinnakkaista hakua. Opiskelijavalikko näyttää ensin nykyiseltä sivulta löydetyt nimet. Laajemmat Wilman luettelot ladataan vasta hakukentän käytön tai Päivitä opiskelijaluettelo -painikkeen yhteydessä; hakukenttä suodattaa listaa lennossa. Jos henkilöä ei löydy luettelosta tai nimellä on useita osumia, käyttäjän on tarkennettava hakua. Wilman erillisen nimihakurajapinnan tukea ei ole vielä vahvistettu.
 
 **Viestit:** opiskelijoille avataan Wilman viestinkirjoitus `r_student`-parametrien avulla; monen erillisen opiskelijan saman viestin URL-esivalinnan toiminta on tarkistettava Wilmassa. Opettajille käytetään Viestikirjaston v0.16.11 nimihakua ja kertaluonteista `wilmatools.composeRequest.v1`-pyyntöä. Opettajan suoraa URL-parametria ei ole vahvistettu. **Tarkista vastaanottajat ennen lähettämistä; työkalu ei lähetä viestejä automaattisesti.** Opettajaviestien esivalinta edellyttää päivitetyn Chrome-työpöytäversion Viestikirjaston asentamista.
 
