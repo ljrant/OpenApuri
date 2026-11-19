@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.2
-// @description  Yksi asennus: OpenApurin Wilma-työkalut ja moduulikohtaiset asetukset
+// @version      1.0.3
+// @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
 // @grant        none
@@ -2395,9 +2395,29 @@ oaStyle.textContent=`
 #oa-dialog .oa-content input[type=checkbox]{width:19px;height:19px}
 #oa-dialog .oa-content a{color:#146392}
 #oa-dialog .oa-foot{background:#f7fafc;padding:10px 16px;font-size:12px;color:#526c80;border-top:1px solid #dce5ec}
-#oa-launcher{display:inline-flex;align-items:center;vertical-align:middle;justify-content:center;border:0;background:transparent;cursor:pointer;border-radius:6px;padding:2px}
-#oa-launcher:hover{background:#e5f0f7}
-#oa-launcher img{width:30px;height:30px;object-fit:contain}
+#oa-launcher{display:inline-flex!important;align-items:center;vertical-align:middle;justify-content:center;border:0!important;background:transparent!important;cursor:pointer;border-radius:7px;padding:0 4px!important;flex:0 0 auto;line-height:1}
+#oa-launcher:hover,#oa-launcher:focus-visible{background:#ffffff26!important;outline:2px solid #b6e9e0;outline-offset:1px}
+#oa-launcher img{width:clamp(60px,6vw,84px)!important;height:clamp(60px,6vw,84px)!important;max-width:none!important;max-height:none!important;object-fit:contain}
+#oa-brand-group{display:inline-flex!important;align-items:center!important;gap:5px!important;flex:0 0 auto!important;min-width:max-content;vertical-align:middle}
+#oa-brand-group>.navbar-brand,#oa-brand-group>a{float:none!important;margin:0!important}
+.oa-active-header{background:#135a63!important;background-image:linear-gradient(105deg,#13475e,#135f67)!important;box-shadow:inset 0 -4px #53d3bd!important}
+.oa-active-header #oa-brand-group{background:transparent!important}
+#oa-dialog .oa-head{background:#e6f5f1!important;border-bottom:3px solid #168b80!important}
+#oa-dialog .oa-nav button[aria-current=page]{background:#d8f4e9!important;color:#075b50!important}
+#wt-side-panel{border-top:3px solid #26a899!important;background:#f0faf6!important}
+#wt-message-toolbar{border-left:5px solid #168b80!important;background:#edf8f4!important}
+#oh-home{border:2px solid #238d83!important;background:#fcfffd!important;box-shadow:0 3px 12px #066a5920!important}
+#oh-home>.panel-heading{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
+#oh-panel{border:2px solid #238d83!important;border-radius:8px!important;background:#f9fffc!important;padding:14px!important}
+#oh-panel>h2{background:#e0f5eb!important;color:#075b50!important;margin:-14px -14px 12px!important;padding:13px 16px!important;border-bottom:2px solid #9cd7c5!important}
+#oh-tab>a,#wt-class-assessment-tab>a{color:#096b5c!important;border-top:3px solid #19a58b!important;background:#e6f7f0!important;font-weight:650!important}
+#oh-tab.active>a,#wt-class-assessment-tab.active>a{color:#fff!important;background:#147c6e!important;border-color:#147c6e!important}
+#wt-panel{border:2px solid #238d83!important}
+#wt-header{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
+#oh-panel .oh-recipient-panel{background:#eaf8f2!important;border:1px solid #7bbdaa!important}
+#oh-panel .oh-action{background:#147c6e!important;color:#fff!important;border-color:#147c6e!important}
+#wt-message-library{border-left:4px solid #168b80!important}
+@media(max-width:600px){#oa-launcher img{width:54px!important;height:54px!important}#oa-brand-group{gap:2px!important}}
 @media(max-width:600px){#oa-dialog .oa-grid{display:flex;flex-direction:column}#oa-dialog .oa-nav{flex-direction:row;overflow:auto;flex-shrink:0;border-right:0;border-bottom:1px solid #dce5ec}#oa-dialog .oa-nav button{white-space:nowrap}}
 `;
 document.head.append(oaStyle);
@@ -2483,17 +2503,36 @@ const oaLauncher=oaElement('button');oaLauncher.id='oa-launcher';oaLauncher.type
 oaLauncher.setAttribute('aria-label','Avaa OpenApurin asetukset');
 const oaImg=oaElement('img');oaImg.alt='OpenApuri';oaImg.src=OA_LOGO;oaLauncher.append(oaImg);
 oaLauncher.onclick=()=>oaOpen();
+function markActiveHeader(logo){
+  // Color only the original top branding bar, leaving native content unchanged.
+  let bar=logo.closest('header,nav.navbar,.navbar,#header,[role="banner"],.header');
+  if(!bar)bar=logo.parentElement;
+  let candidate=bar;
+  for(let step=0;candidate&&step<5;step++,candidate=candidate.parentElement){
+    if(candidate===document.body)break;
+    if(candidate.getBoundingClientRect().width>=window.innerWidth*.72){bar=candidate;break}
+  }
+  if(bar&&bar!==document.body&&bar!==document.documentElement)bar.classList.add('oa-active-header');
+}
 function placeLauncher(){
- const logo=document.querySelector('header .navbar-brand, nav .navbar-brand, .navbar-header .navbar-brand, header a.brand, #header .logo, .navbar-brand');
- if(!logo)return false;
- logo.insertAdjacentElement('afterend',oaLauncher);
- oaLauncher.style.cssText='';
- return true;
+  const logo=document.querySelector('header .navbar-brand,nav .navbar-brand,.navbar-header .navbar-brand,header a.brand,#header .logo,.navbar-brand');
+  if(!logo||!logo.parentElement)return false;
+  let group=document.getElementById('oa-brand-group');
+  if(!group){
+    group=document.createElement('span');group.id='oa-brand-group';
+    logo.parentElement.insertBefore(group,logo);
+    group.append(logo);
+  }else if(!group.contains(logo))group.append(logo);
+  group.append(oaLauncher);
+  oaLauncher.style.cssText='';
+  markActiveHeader(group);
+  return true;
 }
 if(!placeLauncher()){
- oaLauncher.style.cssText='position:fixed;top:8px;right:12px;background:#fff;z-index:2147483000;border:1px solid #c6d8e3';
- document.body.append(oaLauncher);
- let tries=0;const interval=setInterval(()=>{if(placeLauncher()||++tries>20)clearInterval(interval)},500);
+  oaLauncher.style.cssText='position:fixed;top:8px;right:12px;background:#135a63;z-index:2147483000;border:1px solid #c6d8e3';
+  document.body.append(oaLauncher);
+  let tries=0;
+  const interval=setInterval(()=>{if(placeLauncher()||++tries>30)clearInterval(interval)},500);
 }
 
 const savedGrade=()=>{const value=localStorage.getItem(lastKey)||'';return /^\/profiles\/students\/\d+\/choices(?:\/?|\/?\?.*)$/.test(value)?value:null};
