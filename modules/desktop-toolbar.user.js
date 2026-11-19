@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.23.2
+// @version      0.23.3
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -21,7 +21,8 @@ try {
   }
 } catch(e){console.warn('[OpenApuri] Aiemman tallennustiedon kopiointi ei onnistunut:',e)}
 
-if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||window.__openApuriHub)return;
+if(window.__openApuriHub)return;
+const oaMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 window.__openApuriHub=true;
 const KEY='openapuri.settings',lastKey='openapuri.lastGradebook';
 const t={fi:{tools:'Työkalut',progress:'Ryhmänohjaajan arviointinäkymä',autosave:'Viestiluonnosten tallennus',write:'Kirjoita viesti',templates:'Viestipohjat',drafts:'Tallennetut viestit',settings:'Asetukset',language:'Kieli',close:'Sulje',open:'Avaa',install:'Asenna moduuli',hint:'Työkalut otetaan käyttöön tai pois käytöstä Tampermonkeyssa.',unknown:'Avaa ensin opiskelijan opintosuoritussivu, jotta pikavalinta voidaan tallentaa.',home:'Pikavalinta ryhmänohjaajan arviointiin',notEnabled:'Moduuli ei ole tällä sivulla käytettävissä.'},en:{tools:'Tools',progress:'Homeroom grade overview',autosave:'Message draft autosaver',write:'Compose message',templates:'Message templates',drafts:'Saved drafts',settings:'Settings',language:'Language',close:'Close',open:'Open',install:'Install module',hint:'Enable and disable modules in Tampermonkey.',unknown:'First open a student gradebook so the shortcut can be saved.',home:'Homeroom grade overview shortcut',notEnabled:'Module is not available on this page.'}};
@@ -192,6 +193,7 @@ function templateEditor(){openMessageLibrary('templates')}
 function draftSidebar(){openMessageLibrary('drafts')}
 function draw(){
  panel.replaceChildren();
+ if(oaMobile){panel.style.display='none';return;}
  if(oaRead().toolbar===false){panel.style.display='none';return}else panel.style.display='';
  const heading=label('h2','OpenApuri');panel.append(heading);
  const commands=[
