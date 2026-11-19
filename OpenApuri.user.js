@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.0
+// @version      1.0.1
 // @description  OpenApuri: one install, all Wilma tools and in-app module settings
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -12,7 +12,8 @@
 
 (() => {
 'use strict';
-if(window.top!==window.self)return;
+const embeddedSearch=window.top!==window.self&&new URLSearchParams(location.search).get('oh_embed')==='1'&&/^\/profiles\/students\/?$/.test(location.pathname);
+if(window.top!==window.self&&!embeddedSearch)return;
 // A single entry point prevents duplicate initialization when multiple
 // OpenApuri modules are enabled on a Wilma page.
 if(window.__openApuriBundleV1)return;
@@ -27,7 +28,7 @@ const start=callback=>{
   try{callback()}catch(error){console.error('[OpenApuri] Viestiluonnosmoduuli ei käynnistynyt:',error)}
 };
  
-if(path.startsWith('/messages/compose')){
+if(!embeddedSearch&&path.startsWith('/messages/compose')){
   start(()=>{
     (function () {
     'use strict';
@@ -2335,7 +2336,7 @@ try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').draftsAnd
 })();
   });
 }
-whenReady(()=>{
+if(!embeddedSearch)whenReady(()=>{
   // The toolbar owns OpenApuri's logo and per-module settings dialog.
   (() => {
 'use strict';
@@ -2802,7 +2803,7 @@ if(['/', '/index','/dashboard','/home'].includes(location.pathname)){
 }
 })();
 });
-if(/^\/profiles\/classes\/\d+(?:\/|$)/.test(path))
+if(!embeddedSearch&&/^\/profiles\/classes\/\d+(?:\/|$)/.test(path))
   whenReady(()=>{
     (() => {
 'use strict';
