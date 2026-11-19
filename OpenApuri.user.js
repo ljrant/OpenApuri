@@ -2633,7 +2633,7 @@ function draw(){
   if(oaRead().search===false)oaWrite('search',true);
   const term=searchInput.value.trim();
   try{sessionStorage.setItem('openapuri.pendingSearch.v1',term)}catch{}
-  if(/^\\/profiles\\/students\\/?$/.test(location.pathname)){
+  if(/^\/profiles\/students\/?$/.test(location.pathname)){
    const tab=document.querySelector('#oh-tab>a');tab?.click();
    const input=document.querySelector('#oh-chooser input[type="search"]');
    if(input){input.value=term;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();return}
