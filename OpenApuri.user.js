@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.9
+// @version      1.0.10
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -2415,11 +2415,20 @@ oaStyle.textContent=`
 #oh-home>.panel-heading{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
 #oh-panel{border:2px solid #238d83!important;border-radius:8px!important;background:#f9fffc!important;padding:14px!important}
 #oh-panel>h2{background:#e0f5eb!important;color:#075b50!important;margin:-14px -14px 12px!important;padding:13px 16px!important;border-bottom:2px solid #9cd7c5!important}
-/* OpenApuri tabs inherit Wilma's sloped outline and foreground active state.
-   Only text weight/color distinguishes added tabs; no border, backgrounds or pseudo-element overrides. */
-#oh-tab>a,#wt-class-assessment-tab>a,#wt-class-issues-tab>a{color:#096b5c!important;font-weight:650!important}
-#oh-tab>a:hover,#wt-class-assessment-tab>a:hover,#wt-class-issues-tab>a:hover{color:#075b50!important}
-#oh-tab.active>a,#wt-class-assessment-tab.active>a,#wt-class-issues-tab.active>a{color:#075b50!important}
+/* Unified OpenApuri tabs: consistent sloped Wilma-style silhouettes, including active tabs.
+   New OpenApuri tabs can opt in by adding the oa-added-tab class to their <li>. */
+ul.nav-tabs .oa-added-tab{position:relative!important;display:list-item!important;margin:0 3px 0 0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;transform:none!important}
+ul.nav-tabs .oa-added-tab::before,ul.nav-tabs .oa-added-tab::after{content:none!important;display:none!important}
+ul.nav-tabs .oa-added-tab>a{position:relative!important;isolation:isolate!important;display:flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important;min-height:34px!important;height:34px!important;padding:7px 16px!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;background-image:none!important;box-shadow:none!important;transform:none!important;text-shadow:none!important;white-space:nowrap!important;font:600 13px/1.2 inherit!important;color:#096b5c!important;z-index:1!important}
+ul.nav-tabs .oa-added-tab>a::before,ul.nav-tabs .oa-added-tab>a::after{content:""!important;display:block!important;position:absolute!important;pointer-events:none!important;clip-path:polygon(9px 0,calc(100% - 9px) 0,100% 100%,0 100%)!important;border:0!important;transform:none!important}
+ul.nav-tabs .oa-added-tab>a::before{inset:0!important;z-index:-2!important;background:#cbd8d8!important}
+ul.nav-tabs .oa-added-tab>a::after{inset:1px 1px 0!important;z-index:-1!important;background:#f7faf9!important}
+ul.nav-tabs .oa-added-tab>a:hover{color:#075b50!important}
+ul.nav-tabs .oa-added-tab>a:hover::after{background:#e1f2ec!important}
+ul.nav-tabs .oa-added-tab.active>a{color:#fff!important;font-weight:700!important}
+ul.nav-tabs .oa-added-tab.active>a::before{background:#4c970c!important}
+ul.nav-tabs .oa-added-tab.active>a::after{background:#147c6e!important}
+ul.nav-tabs .oa-added-tab>a:focus-visible{outline:2px solid #4c970c!important;outline-offset:1px!important}
 #wt-panel{border:2px solid #238d83!important}
 #wt-header{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
 #oh-panel .oh-recipient-panel{background:#eaf8f2!important;border:1px solid #7bbdaa!important}
@@ -2971,12 +2980,12 @@ function tabStrip(){return document.querySelector('ul.nav.nav-tabs.nav-tabs-prim
 function installAssessmentTab(){
  const tabs=tabStrip();
  if(!tabs||document.getElementById('wt-class-assessment-tab'))return;
- const item=document.createElement('li');item.id='wt-class-assessment-tab';
+ const item=document.createElement('li');item.id='wt-class-assessment-tab';item.classList.add('oa-added-tab');
  const link=el('a',cfg.lang==='fi'?'Arviointinäkymä':'Grade overview');
  link.href=classBase+'#wt-assessment';
  link.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment()});
  item.append(link);
- const issuesItem=document.createElement('li');issuesItem.id='wt-class-issues-tab';
+ const issuesItem=document.createElement('li');issuesItem.id='wt-class-issues-tab';issuesItem.classList.add('oa-added-tab');
  const issuesLink=el('a',cfg.lang==='fi'?'Huomiot':'Issues');issuesLink.href=classBase+'#wt-issues';
  
  issuesLink.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment('issues')});
@@ -3211,7 +3220,7 @@ if(homePage){
 }
 const tabs=$('main#main-content ul.nav.nav-tabs-primary')||$('ul.nav.nav-tabs-primary');
 if(!tabs){console.warn('[OpiskelijaHaku] Välilehtipalkkia ei löydy');return}
-const li=make('li');li.id='oh-tab';
+const li=make('li');li.id='oh-tab';li.classList.add('oa-added-tab');
 const link=make('a','','OpiskelijaHaku');
 link.href=directoryPage?'#opiskelijahaku':'/profiles/students/#opiskelijahaku';
 link.setAttribute('role','tab');li.append(link);
