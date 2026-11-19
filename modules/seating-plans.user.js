@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wilma Seating Plans — standalone beta
 // @namespace    arviointiapina.seating
-// @version      1.5.0
+// @version      1.5.1
 // @description  Pöytäjärjestykset, oppilasjärjestykset, arvonta, yhdistelmäryhmät ja Wilman omat tuntimerkinnät.
 // @match        https://espoo.inschool.fi/groups/*/seating*
 // @grant        GM_getValue
@@ -393,6 +393,38 @@ table.wsp-grid .wsp-attendance-open[hidden]{display:none!important}
 #wsp-attendance-dialog label{display:block;flex:1 1 190px;margin:0}#wsp-attendance-dialog select{display:block;width:100%;box-sizing:border-box;margin-top:4px}
 #wsp-attendance-dialog button,#wsp-attendance-dialog select{font:inherit;min-height:32px;height:auto;padding:5px 8px;border:1px solid #9eafc2;border-radius:4px;background:#f4f7fb;color:#182838;cursor:pointer}
 #wsp-attendance-dialog [data-att=message]{min-height:20px;font-weight:600}#wsp-attendance-dialog iframe{display:block;width:100%;height:62vh;min-height:360px;border:1px solid #c6d1de;background:white;margin-top:8px;box-sizing:border-box}
+
+
+/* OpenApuri shared palette. The same --oa-* tokens are defined by the
+   main toolbar; fallbacks keep this standalone seating module consistent. */
+#wsp-panel{
+  --wsp-primary:var(--oa-primary,#147c6e);
+  --wsp-primary-dark:var(--oa-primary-dark,#075b50);
+  --wsp-surface:var(--oa-surface,#f5fbf8);
+  --wsp-surface-accent:var(--oa-surface-accent,#e0f5eb);
+  --wsp-border:var(--oa-border,#9cd7c5);
+  --wsp-text:var(--oa-text,#173c48);
+  background:var(--wsp-surface)!important;
+  color:var(--wsp-text)!important;
+  border-color:var(--wsp-border)!important;
+  border-left:4px solid var(--wsp-primary)!important;
+}
+#wsp-panel>h3{background:var(--wsp-surface-accent)!important;color:var(--wsp-primary-dark)!important;border-bottom:2px solid var(--wsp-border)!important;padding:8px 10px!important;margin:-11px -11px 10px!important}
+#wsp-panel h4,#wsp-panel summary{color:var(--wsp-primary-dark)!important}
+#wsp-panel .wsp-tabs{border-bottom-color:var(--wsp-border)!important}
+#wsp-panel .wsp-tabs>button{color:var(--wsp-primary-dark)!important}
+#wsp-panel .wsp-tabs>button[aria-selected=true]{color:var(--wsp-primary-dark)!important;border-bottom-color:var(--wsp-primary)!important;background:var(--wsp-surface-accent)!important}
+#wsp-panel button:not(.wsp-primary),#wsp-panel select,#wsp-panel input{border-color:var(--wsp-border)!important}
+#wsp-panel .wsp-primary,.wsp-board-actions .wsp-primary{background:var(--wsp-primary)!important;border-color:var(--wsp-primary)!important;color:#fff!important}
+.wsp-board{border-color:var(--oa-border,#9cd7c5)!important}
+.wsp-board-actions{border-top-color:var(--oa-border,#9cd7c5)!important;color:var(--oa-text,#173c48)!important}
+.wsp-board-actions button:not(.wsp-primary),.wsp-board-actions select{border-color:var(--oa-border,#9cd7c5)!important;color:var(--oa-text,#173c48)!important}
+.wsp-board-actions summary{color:var(--oa-primary-dark,#075b50)!important}
+#wsp-roster,#wsp-attendance-dialog{border-color:var(--oa-border,#9cd7c5)!important;color:var(--oa-text,#173c48)!important}
+#wsp-roster .wsp-dialog-bar,#wsp-attendance-dialog .wsp-attendance-header{background:var(--oa-surface-accent,#e0f5eb)!important;border-bottom:2px solid var(--oa-border,#9cd7c5)!important;padding:8px 10px!important}
+#wsp-roster button,#wsp-attendance-dialog button,#wsp-attendance-dialog select{border-color:var(--oa-border,#9cd7c5)!important;color:var(--oa-primary-dark,#075b50)!important;background:var(--oa-surface,#f5fbf8)!important}
+#wsp-roster .wsp-import-box{background:var(--oa-surface,#f5fbf8)!important;border-color:var(--oa-border,#9cd7c5)!important}
+#wsp-panel :focus-visible,#wsp-roster :focus-visible,#wsp-attendance-dialog :focus-visible{outline-color:var(--oa-primary,#147c6e)!important}
 
 </style>
 <h3>Istumajärjestys</h3>
