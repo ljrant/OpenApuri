@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.12
+// @version      1.0.13
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -2415,18 +2415,14 @@ oaStyle.textContent=`
 #oh-home>.panel-heading{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
 #oh-panel{border:2px solid #238d83!important;border-radius:8px!important;background:#f9fffc!important;padding:14px!important}
 #oh-panel>h2{background:#e0f5eb!important;color:#075b50!important;margin:-14px -14px 12px!important;padding:13px 16px!important;border-bottom:2px solid #9cd7c5!important}
-/* Retain Wilma's native tab sprites, dimensions and green active outline.
-   Tint their painted areas mint using multiply blending rather than replacing
-   the native middle/side background images with rectangular CSS shapes. */
-ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a,
-ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a::before,
-ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a::after{
-  background-color:#e5f5ed!important;
-  background-blend-mode:multiply!important;
-}
+/* Native Wilma sprite geometry and green active outline remain untouched.
+   A small mint marker inside the tab distinguishes OpenApuri from native tabs.
+   Never tint the link/pseudo-element backgrounds: sprite transparency would
+   reveal a rectangular block outside the sloped silhouette. */
 ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a{color:#096b5c!important;font-weight:600!important}
 ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a:hover{color:#075b50!important}
 ul.nav-tabs.nav-tabs-primary>li.oa-added-tab.active>a{color:#096b5c!important}
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a>.oa-tab-mark{display:inline-block!important;width:7px!important;height:7px!important;min-width:7px!important;margin:0 6px 1px 0!important;vertical-align:middle!important;border-radius:50%!important;background:#21a995!important;box-shadow:0 0 0 1px #087266!important}
 #wt-panel{border:2px solid #238d83!important}
 #wt-header{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
 #oh-panel .oh-recipient-panel{background:#eaf8f2!important;border:1px solid #7bbdaa!important}
@@ -2979,12 +2975,12 @@ function installAssessmentTab(){
  const tabs=tabStrip();
  if(!tabs||document.getElementById('wt-class-assessment-tab'))return;
  const item=document.createElement('li');item.id='wt-class-assessment-tab';item.classList.add('oa-added-tab');
- const link=el('a',cfg.lang==='fi'?'Arviointinäkymä':'Grade overview');
+ const link=el('a',cfg.lang==='fi'?'Arviointinäkymä':'Grade overview');const mark=document.createElement('span');mark.className='oa-tab-mark';mark.setAttribute('aria-hidden','true');mark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';link.prepend(mark);
  link.href=classBase+'#wt-assessment';
  link.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment()});
  item.append(link);
  const issuesItem=document.createElement('li');issuesItem.id='wt-class-issues-tab';issuesItem.classList.add('oa-added-tab');
- const issuesLink=el('a',cfg.lang==='fi'?'Huomiot':'Issues');issuesLink.href=classBase+'#wt-issues';
+ const issuesLink=el('a',cfg.lang==='fi'?'Huomiot':'Issues');const mark=document.createElement('span');mark.className='oa-tab-mark';mark.setAttribute('aria-hidden','true');mark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';issuesLink.prepend(mark);issuesLink.href=classBase+'#wt-issues';
  
  issuesLink.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment('issues')});
  issuesItem.append(issuesLink);
@@ -3219,7 +3215,7 @@ if(homePage){
 const tabs=$('main#main-content ul.nav.nav-tabs-primary')||$('ul.nav.nav-tabs-primary');
 if(!tabs){console.warn('[OpiskelijaHaku] Välilehtipalkkia ei löydy');return}
 const li=make('li');li.id='oh-tab';li.classList.add('oa-added-tab');
-const link=make('a','','OpiskelijaHaku');
+const link=make('a','','OpiskelijaHaku');const mark=document.createElement('span');mark.className='oa-tab-mark';mark.setAttribute('aria-hidden','true');mark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';link.prepend(mark);
 link.href=directoryPage?'#opiskelijahaku':'/profiles/students/#opiskelijahaku';
 link.setAttribute('role','tab');li.append(link);
 tabs.insertBefore(li,$('.tabdrop',tabs));
