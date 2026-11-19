@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.19.6
+// @version      0.19.7
 // @description  Local Wilma homeroom gradebook overview, FI/EN
 // @match        https://*.inschool.fi/profiles/classes/*
 // @grant        none
@@ -115,12 +115,12 @@ function installAssessmentTab(){
  const tabs=tabStrip();
  if(!tabs||document.getElementById('wt-class-assessment-tab'))return;
  const item=document.createElement('li');item.id='wt-class-assessment-tab';item.classList.add('oa-added-tab');
- const link=el('a',cfg.lang==='fi'?'Arviointinäkymä':'Grade overview');
+ const link=el('a',cfg.lang==='fi'?'Arviointinäkymä':'Grade overview');const mark=document.createElement('span');mark.className='oa-tab-mark';mark.setAttribute('aria-hidden','true');mark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';link.prepend(mark);
  link.href=classBase+'#wt-assessment';
  link.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment()});
  item.append(link);
  const issuesItem=document.createElement('li');issuesItem.id='wt-class-issues-tab';issuesItem.classList.add('oa-added-tab');
- const issuesLink=el('a',cfg.lang==='fi'?'Huomiot':'Issues');issuesLink.href=classBase+'#wt-issues';
+ const issuesLink=el('a',cfg.lang==='fi'?'Huomiot':'Issues');const mark=document.createElement('span');mark.className='oa-tab-mark';mark.setAttribute('aria-hidden','true');mark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';issuesLink.prepend(mark);issuesLink.href=classBase+'#wt-issues';
  
  issuesLink.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment('issues')});
  issuesItem.append(issuesLink);
