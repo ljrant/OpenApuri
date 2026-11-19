@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.19.3
+// @version      0.19.4
 // @description  Local Wilma homeroom gradebook overview, FI/EN
 // @match        https://*.inschool.fi/profiles/classes/*
 // @grant        none
@@ -9,6 +9,9 @@
 // ==/UserScript==
 (() => {
 'use strict';
+// Per-module state controlled by OpenApuri's in-app settings menu.
+try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').progress===false)return;}catch{}
+
 // One-time compatible copy of older local data; never overwrite OpenApuri values.
 try {
   const prefix='wilma'+'tools.';
