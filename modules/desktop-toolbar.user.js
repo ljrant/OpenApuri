@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.23.0
+// @version      0.23.1
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @grant        none
@@ -98,6 +98,16 @@ function oaRender(id){
  const link=(txt,url)=>{
   const a=oaElement('a',txt);a.href=url;a.target='_blank';a.rel='noopener noreferrer';main.append(a);
  };
+ const launch=(txt,url,moduleId)=>{
+  const button=oaElement('button',txt);button.type='button';
+  button.style.cssText='background:#176393;color:#fff;border:0;border-radius:6px;padding:10px 15px;margin:5px 0 12px;cursor:pointer;font-weight:600';
+  button.onclick=()=>{
+    if(moduleId&&oaRead()[moduleId]===false)oaWrite(moduleId,true);
+    // Same-tab navigation is intentional: this is a module launcher.
+    location.assign(url);
+  };
+  main.append(button);
+ };
  if(id==='general'){
   const label=oaElement('label','Kieli');
   const select=oaElement('select');
@@ -112,12 +122,15 @@ function oaRender(id){
   if(id==='progress'){
    labeledToggle('progressEnabled','Opintoseuranta aktiivinen',oaGlobal().enabled!==false,v=>localStorage.setItem(KEY,JSON.stringify({...oaGlobal(),enabled:v})));
    main.append(oaElement('p','Opintoseurannan asetukset ja piilotettujen opintojaksojen valinnat säilyvät paikallisesti.'));
-   link('Avaa ryhmäluettelo','/groups');
+   launch('Avaa ryhmäluettelo','/groups','progress');
   }
-  if(id==='search')link('Avaa haku','/profiles/students/#opiskelijahaku');
+  if(id==='search'){
+   launch('Avaa OpiskelijaHaku Wilmassa','/profiles/students/#opiskelijahaku','search');
+   main.append(oaElement('p','Haku avautuu suoraan Wilman opiskelijaluettelossa. Jos OpiskelijaHaku on poistettu käytöstä vain OpenApurin asetuksista, painike ottaa sen samalla takaisin käyttöön.'));
+  }
   if(id==='draftsChrome'||id==='draftsAndroid'){
    main.append(oaElement('p','Luonnoksia muokataan Wilman viestikirjastossa. Niitä ei lähetetä erilliselle palvelimelle.'));
-   link('Avaa viestit','/messages/compose');
+   launch('Avaa viestinkirjoitus','/messages/compose',id);
   }
   if(id==='toolbar')main.append(oaElement('p','Kuvake ja asetukset-valikko pysyvät käytössä, vaikka alapalkki piilotetaan.'));
  }
@@ -180,6 +193,7 @@ function draw(){
  if(oaRead().toolbar===false){panel.style.display='none';return}else panel.style.display='';
  const heading=label('h2','OpenApuri');panel.append(heading);
  const commands=[
+  [lang==='fi'?'OpiskelijaHaku':'Student search',()=>{if(oaRead().search===false)oaWrite('search',true);location.assign('/profiles/students/#opiskelijahaku')}],
   [lang==='fi'?'Kirjoita viesti':'Compose',()=>location.assign('/messages/compose')],
   [lang==='fi'?'Viestipohjat':'Templates',()=>templateEditor()],
   [lang==='fi'?'Luonnokset':'Drafts',()=>draftSidebar()]
