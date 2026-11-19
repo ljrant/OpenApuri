@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Message Autosaver (Chrome Desktop)
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.16.18
+// @version      0.16.19
 // @description  Chrome desktop local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
@@ -26,6 +26,8 @@ try {
     // Only activate the intended browser variant, avoiding two simultaneous autosavers.
     const ua = navigator.userAgent;
     if ( /Android|iPhone|iPad|iPod/i.test(ua) || !/Chrome|Chromium/i.test(ua) || /Edg\//i.test(ua)) return;
+    if(window.__openApuriChromeDrafts)return;
+    window.__openApuriChromeDrafts=true;
 
     // Drafts are sensitive: stored only on this origin in localStorage; clear after sending.
     const STORAGE_KEY = 'wilma-compose-autosave:' + location.hostname + location.pathname;
