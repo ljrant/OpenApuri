@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.1
+// @version      0.24.2
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -77,7 +77,12 @@ oaStyle.textContent=`
 #oa-launcher:hover,#oa-launcher:focus-visible{background:#ffffff26!important;outline:2px solid #b6e9e0;outline-offset:1px}
 #oa-launcher img{display:block!important;width:36px!important;height:36px!important;min-width:0!important;min-height:0!important;max-width:36px!important;max-height:36px!important;object-fit:contain}
 #oa-brand-group{display:inline-flex!important;align-items:center!important;gap:3px!important;flex:0 0 auto!important;min-width:max-content;vertical-align:middle}
-#oa-brand-group>.navbar-brand,#oa-brand-group>a{float:none!important;margin:0!important}
+#oa-brand-group>.navbar-brand,#oa-brand-group>a:not(#oa-launcher){float:none!important;display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;width:max-content!important;min-width:0!important;max-width:none!important;padding-left:4px!important;padding-right:4px!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box!important}
+#oa-brand-group>.navbar-brand img,#oa-brand-group>a:not(#oa-launcher) img{max-height:40px!important;width:auto!important;object-fit:contain}
+#oa-brand-group{padding:0!important;margin:0!important}
+#oa-brand-group #oa-launcher{margin-left:0!important;margin-right:0!important}
+/* Tighten the logo area's inherited grid spacing, not the other native navbar items. */
+#oa-brand-group:has(> .navbar-brand){margin-left:0!important}
 .oa-active-header{background:#135a63!important;background-image:linear-gradient(105deg,#13475e,#135f67)!important;box-shadow:inset 0 -4px #53d3bd!important}
 .oa-active-header #oa-brand-group{background:transparent!important}
 #oa-dialog .oa-head{background:#e6f5f1!important;border-bottom:3px solid #168b80!important}
