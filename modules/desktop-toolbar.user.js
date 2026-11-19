@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.13
+// @version      0.24.14
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -30,10 +30,16 @@ let lang='fi';try{lang=JSON.parse(localStorage.getItem(KEY)||'{}').lang==='en'?'
 const x=k=>t[lang][k],grade=/^\/profiles\/students\/\d+\/choices\/?$/;
 const css=document.createElement('style');css.textContent=`
 #wt-side-toggle{display:none!important}
-#wt-side-panel{position:fixed;bottom:0;left:0;right:0;top:auto;z-index:10020;background:#f4f7f9;border-top:1px solid #cad5dc;box-shadow:0 -1px 5px #0001;padding:5px 14px;font:12px system-ui;color:#345;box-sizing:border-box;display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-height:31px}
-#wt-side-panel button,#wt-side-panel select{font:inherit;border:0;background:transparent;color:#285779;padding:3px 7px;cursor:pointer;border-radius:4px}#wt-side-panel button:hover{background:#e3ebf2}
-#wt-side-panel h2{font-size:12px;margin:0 9px 0 0;font-weight:600}#wt-side-panel .item{display:contents}
-@media(max-width:640px){#wt-side-panel{position:static}}
+#wt-side-panel{position:fixed!important;bottom:0!important;left:0!important;right:0!important;top:auto!important;z-index:10020!important;background:var(--oa-surface,#f5fbf8)!important;border-top:3px solid var(--oa-primary,#147c6e)!important;box-shadow:0 -2px 10px #0002!important;padding:7px 14px!important;font:13px system-ui!important;color:var(--oa-text,#173c48)!important;box-sizing:border-box!important;display:flex!important;gap:9px!important;align-items:center!important;flex-wrap:wrap!important;min-height:46px!important;visibility:visible!important}
+#wt-side-panel .oa-bottom-brand{color:var(--oa-primary-dark,#075b50);font-size:14px;font-weight:750;margin-right:4px}
+#wt-side-panel .oa-bottom-search{display:flex;align-items:center;gap:5px;flex:1 1 270px;max-width:520px;margin:0}
+#wt-side-panel .oa-bottom-search input{flex:1 1 auto;min-width:110px;height:32px;padding:4px 9px;border:1px solid var(--oa-border,#9cd7c5);border-radius:5px;background:#fff;color:var(--oa-text,#173c48);font:inherit}
+#wt-side-panel button{font:inherit;border:1px solid transparent;background:transparent;color:var(--oa-primary-dark,#075b50);padding:6px 9px;cursor:pointer;border-radius:4px;white-space:nowrap}
+#wt-side-panel .oa-bottom-search button{background:var(--oa-primary,#147c6e);color:white;font-weight:650}
+#wt-side-panel button:hover{background:var(--oa-surface-accent,#e0f5eb)}
+#wt-side-panel .oa-bottom-search button:hover{background:var(--oa-primary-dark,#075b50)}
+body:has(#wt-side-panel){padding-bottom:54px!important}
+@media(max-width:640px){#wt-side-panel{position:fixed!important;gap:5px!important;padding:5px 8px!important}#wt-side-panel .oa-bottom-brand{font-size:12px}#wt-side-panel .oa-bottom-search{flex-basis:180px}#wt-side-panel button{padding:5px 6px}}
 `;document.head.append(css);
 const btn=document.createElement('button');btn.id='wt-side-toggle';btn.hidden=true;
 const panel=document.createElement('nav');panel.id='wt-side-panel';panel.setAttribute('aria-label','OpenApuri');document.body.append(panel);
@@ -183,7 +189,7 @@ function oaRender(id){
   select.onchange=()=>{lang=select.value;localStorage.setItem(KEY,JSON.stringify({...oaGlobal(),lang}));draw()};
   label.append(select);main.append(label);
  }else{
-  labeledToggle(id,'Moduuli käytössä',oaRead()[id]!==false,v=>{oaWrite(id,v);if(id==='toolbar')draw()});
+  if(id!=='toolbar')labeledToggle(id,'Moduuli käytössä',oaRead()[id]!==false,v=>oaWrite(id,v));
   if(id==='progress'){
    labeledToggle('progressEnabled','Opintoseuranta aktiivinen',oaGlobal().enabled!==false,v=>localStorage.setItem(KEY,JSON.stringify({...oaGlobal(),enabled:v})));
    main.append(oaElement('p','Opintoseurannan asetukset ja piilotettujen opintojaksojen valinnat säilyvät paikallisesti.'));
@@ -197,7 +203,7 @@ function oaRender(id){
    main.append(oaElement('p','Luonnoksia muokataan Wilman viestikirjastossa. Niitä ei lähetetä erilliselle palvelimelle.'));
    launch('Avaa viestinkirjoitus','/messages/compose',id);
   }
-  if(id==='toolbar')main.append(oaElement('p','Kuvake ja asetukset-valikko pysyvät käytössä, vaikka alapalkki piilotetaan.'));
+  if(id==='toolbar')main.append(oaElement('p','OpenApurin alapalkki ja haku näkyvät kaikilla Wilman sivuilla.'));
  }
  main.focus();
 }
@@ -293,21 +299,31 @@ function templateEditor(){openMessageLibrary('templates')}
 function draftSidebar(){openMessageLibrary('drafts')}
 function draw(){
  panel.replaceChildren();
- if(oaMobile){panel.style.display='none';return;}
- if(oaRead().toolbar===false){panel.style.display='none';return}else panel.style.display='';
- const heading=label('h2','OpenApuri');panel.append(heading);
+ panel.style.display='flex';
+ const heading=label('strong','OpenApuri');heading.className='oa-bottom-brand';panel.append(heading);
+ const searchForm=label('form','');searchForm.className='oa-bottom-search';
+ const searchInput=label('input','');searchInput.type='search';searchInput.name='haku';searchInput.placeholder=lang==='fi'?'Hae opiskelijaa tai henkilökuntaa…':'Search students or staff…';searchInput.setAttribute('aria-label',lang==='fi'?'Haku':'Search');searchInput.autocomplete='off';
+ const go=label('button',lang==='fi'?'Haku':'Search');go.type='submit';
+ searchForm.append(searchInput,go);
+ searchForm.onsubmit=event=>{
+  event.preventDefault();
+  if(oaRead().search===false)oaWrite('search',true);
+  const term=searchInput.value.trim();
+  try{sessionStorage.setItem('openapuri.pendingSearch.v1',term)}catch{}
+  if(/^\\/profiles\\/students\\/?$/.test(location.pathname)){
+   const tab=document.querySelector('#oh-tab>a');tab?.click();
+   const input=document.querySelector('#oh-chooser input[type="search"]');
+   if(input){input.value=term;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();return}
+  }
+  location.assign('/profiles/students/#opiskelijahaku');
+ };
+ panel.append(searchForm);
  const commands=[
-  [lang==='fi'?'OpiskelijaHaku':'Student search',()=>{if(oaRead().search===false)oaWrite('search',true);location.assign('/profiles/students/#opiskelijahaku')}],
   [lang==='fi'?'Kirjoita viesti':'Compose',()=>location.assign('/messages/compose')],
   [lang==='fi'?'Viestipohjat':'Templates',()=>templateEditor()],
   [lang==='fi'?'Luonnokset':'Drafts',()=>draftSidebar()]
  ];
  for(const [name,fn] of commands){const control=label('button',name);control.type='button';control.onclick=fn;panel.append(control)}
- const language=label('select','');
- for(const [code,name]of [['fi','FI'],['en','EN']]){const opt=label('option',name);opt.value=code;language.append(opt)}
- language.value=lang;language.setAttribute('aria-label','Kieli');
- language.onchange=()=>{lang=language.value;let settings={};try{settings=JSON.parse(localStorage.getItem(KEY)||'{}')}catch{}settings.lang=lang;localStorage.setItem(KEY,JSON.stringify(settings));draw()};
- panel.append(language);
  const settings=label('button',lang==='fi'?'Asetukset':'Settings');settings.type='button';settings.onclick=()=>oaOpen();panel.append(settings);
 }
 draw();
@@ -575,7 +591,6 @@ function installUnifiedMessageBar(){
  main.insertAdjacentElement('afterbegin',bar);
 }
 if(/^\/messages\//.test(location.pathname)){
- panel.style.display='none';
  installUnifiedMessageBar();
  let checks=0;const wait=setInterval(()=>{installUnifiedMessageBar();if(++checks>25)clearInterval(wait)},450);
 }
