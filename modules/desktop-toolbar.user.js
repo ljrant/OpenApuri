@@ -206,10 +206,10 @@ function placeLauncher(){
   if(!root)return false;
   const visible=el=>!!(el.getClientRects().length);
   const matches=[...root.querySelectorAll('a,button,[role="menuitem"]')].filter(el=>
-    visible(el)&&/^(?:Viestit|Messages)(?:\\s*\\(\\d+\\))?$/i.test((el.textContent||'').trim()));
+    visible(el)&&/^(?:Viestit|Messages)(?:\s*\(\d+\))?$/i.test((el.textContent||'').trim()));
   // Some Wilma layouts place messages in a separate navbar node.
   const message=matches[0]||[...document.querySelectorAll('header a,nav a,.navbar a')].find(el=>
-    visible(el)&&/^(?:Viestit|Messages)(?:\\s*\\(\\d+\\))?$/i.test((el.textContent||'').trim()));
+    visible(el)&&/^(?:Viestit|Messages)(?:\s*\(\d+\))?$/i.test((el.textContent||'').trim()));
   if(!message)return false;
   const navbar=message.closest('.navbar-nav,ul.nav,nav,header,.navbar,[role="navigation"]')||message.parentElement;
   if(!navbar)return false;
