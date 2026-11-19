@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         Wilma Seating Plans — standalone beta
 // @namespace    arviointiapina.seating
-// @version      1.5.1
+// @version      1.5.2
 // @description  Pöytäjärjestykset, oppilasjärjestykset, arvonta, yhdistelmäryhmät ja Wilman omat tuntimerkinnät.
 // @match        https://espoo.inschool.fi/groups/*/seating*
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_setClipboard
 // @grant        unsafeWindow
+// @grant        GM_listValues
 // @noframes
 // @run-at       document-idle
 // ==/UserScript==
@@ -16,6 +17,20 @@
   'use strict';
   if(window.top!==window.self)return;
   if (!/^\/groups\/\d+\/seating\/?$/.test(location.pathname)) return;
+  // One-time export of legacy Tampermonkey storage into the OpenApuri
+  // unified-script localStorage namespace. Never overwrite newer unified data.
+  try{
+    if(typeof GM_listValues==='function'){
+      for(const key of GM_listValues()){
+        if(!String(key).startsWith('wilma-seating-plans:v1'))continue;
+        const target='openapuri.seating.gm:'+key;
+        if(localStorage.getItem(target)===null)
+          localStorage.setItem(target,JSON.stringify(GM_getValue(key)));
+      }
+    }
+  }catch(error){console.warn('[OpenApuri seating] Tallenteiden siirto ei onnistunut:',error)}
+  if(window.__openApuriSeatingIntegrated)return;
+
   const KEY = 'wilma-seating-plans:v1';
   const group = location.pathname.split('/')[2];
   const clone = x => JSON.parse(JSON.stringify(x));
