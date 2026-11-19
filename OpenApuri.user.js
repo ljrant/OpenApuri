@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.6
+// @version      1.0.7
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -2361,7 +2361,7 @@ const btn=document.createElement('button');btn.id='wt-side-toggle';btn.hidden=tr
 const panel=document.createElement('nav');panel.id='wt-side-panel';panel.setAttribute('aria-label','OpenApuri');document.body.append(panel);
 const label=(tag,text)=>{const a=document.createElement(tag);a.textContent=text;return a};
 
-const OA_LOGO='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriLogo.svg';
+const OA_LOGO='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriLogo.png';
 const OA_PREFS_KEY='openapuri.modules.v1';
 const OA_MODULES=[
  ['general','Yleiset','Kaikkien moduulien yhteiset asetukset'],
@@ -2398,7 +2398,7 @@ oaStyle.textContent=`
 #oa-launcher{display:inline-flex!important;align-items:center!important;vertical-align:middle;justify-content:center!important;border:0!important;background:transparent!important;cursor:pointer;border-radius:0!important;padding:0!important;flex:0 0 auto;line-height:1;height:40px!important;max-height:40px!important;box-sizing:border-box!important}
 #oa-launcher:hover,#oa-launcher:focus-visible{background:#ffffff26!important;outline:2px solid #b6e9e0;outline-offset:1px}
 #oa-launcher img{display:block!important;width:40px!important;height:40px!important;min-width:0!important;min-height:0!important;max-width:40px!important;max-height:40px!important;object-fit:contain;transform:scale(1.08);transform-origin:center}
-#oa-brand-group{display:inline-flex!important;align-items:center!important;gap:3px!important;flex:0 0 auto!important;min-width:max-content;vertical-align:middle}
+#oa-brand-group{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:3px!important;flex:0 0 auto!important;min-width:max-content;vertical-align:middle;max-height:44px!important;white-space:nowrap}
 #oa-brand-group>.navbar-brand,#oa-brand-group>a:not(#oa-launcher){float:none!important;display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;width:max-content!important;min-width:0!important;max-width:none!important;padding-left:4px!important;padding-right:4px!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box!important}
 #oa-brand-group>.navbar-brand img,#oa-brand-group>a:not(#oa-launcher) img{max-height:40px!important;width:auto!important;object-fit:contain}
 #oa-brand-group{padding:0!important;margin:0!important}
@@ -2521,13 +2521,32 @@ function markActiveHeader(logo){
 }
 function placeLauncher(){
   const logo=document.querySelector('header .navbar-brand,nav .navbar-brand,.navbar-header .navbar-brand,header a.brand,#header .logo,.navbar-brand');
-  if(!logo||!logo.parentElement)return false;
+  if(!logo)return false;
+  // Find the visible Viestit/Messages navigation entry. The logos belong between
+  // this entry and the application grid, not in the original branding column.
+  const root=logo.closest('header,nav.navbar,.navbar,#header,[role="banner"],.header')||document.querySelector('header,nav.navbar,.navbar');
+  if(!root)return false;
+  const visible=el=>!!(el.getClientRects().length);
+  const matches=[...root.querySelectorAll('a,button,[role="menuitem"]')].filter(el=>
+    visible(el)&&/^(?:Viestit|Messages)(?:\\s*\\(\\d+\\))?$/i.test((el.textContent||'').trim()));
+  // Some Wilma layouts place messages in a separate navbar node.
+  const message=matches[0]||[...document.querySelectorAll('header a,nav a,.navbar a')].find(el=>
+    visible(el)&&/^(?:Viestit|Messages)(?:\\s*\\(\\d+\\))?$/i.test((el.textContent||'').trim()));
+  if(!message)return false;
+  const navbar=message.closest('.navbar-nav,ul.nav,nav,header,.navbar,[role="navigation"]')||message.parentElement;
+  if(!navbar)return false;
+  // Insert immediately after the top-level messages item, preserving the native
+  // nine-square app menu and avoiding changes to its click handlers.
+  let item=message;
+  while(item.parentElement&&item.parentElement!==navbar)item=item.parentElement;
+  if(item===navbar||!item.parentElement)return false;
   let group=document.getElementById('oa-brand-group');
   if(!group){
-    group=document.createElement('span');group.id='oa-brand-group';
-    logo.parentElement.insertBefore(group,logo);
-    group.append(logo);
-  }else if(!group.contains(logo))group.append(logo);
+    group=document.createElement(navbar.tagName==='UL'||navbar.tagName==='OL'?'li':'span');
+    group.id='oa-brand-group';
+  }
+  item.after(group);
+  group.append(logo);
   group.append(oaLauncher);
   oaLauncher.style.cssText='';
   markActiveHeader(group);
