@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.22.1
+// @version      0.23.0
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @grant        none
@@ -35,6 +35,129 @@ const css=document.createElement('style');css.textContent=`
 const btn=document.createElement('button');btn.id='wt-side-toggle';btn.hidden=true;
 const panel=document.createElement('nav');panel.id='wt-side-panel';panel.setAttribute('aria-label','OpenApuri');document.body.append(panel);
 const label=(tag,text)=>{const a=document.createElement(tag);a.textContent=text;return a};
+
+const OA_LOGO='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriLogo.svg';
+const OA_PREFS_KEY='openapuri.modules.v1';
+const OA_MODULES=[
+ ['general','Yleiset','Kaikkien moduulien yhteiset asetukset'],
+ ['progress','Opintoseuranta','Ryhmänohjaajan opintoseuranta'],
+ ['search','OpiskelijaHaku','Opiskelijoiden ja henkilökunnan haku'],
+ ['draftsChrome','Viestiluonnokset · Chrome','Viestien tallennus tietokoneella'],
+ ['draftsAndroid','Viestiluonnokset · Android','Viestien tallennus Firefox Androidissa'],
+ ['toolbar','Työkalupalkki','Wilman OpenApuri-toiminnot']
+];
+const oaRead=()=>{try{return JSON.parse(localStorage.getItem(OA_PREFS_KEY)||'{}')||{}}catch{return {}}};
+const oaWrite=(id,value)=>{const d=oaRead();d[id]=value;localStorage.setItem(OA_PREFS_KEY,JSON.stringify(d))};
+const oaGlobal=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch{return {}}};
+const oaElement=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e};
+const oaStyle=document.createElement('style');
+oaStyle.textContent=`
+#oa-dialog[hidden]{display:none!important}
+#oa-dialog{position:fixed;inset:0;z-index:2147483600;color:#243a4b;font:14px system-ui,sans-serif}
+#oa-dialog .oa-shade{position:absolute;inset:0;background:#12263899}
+#oa-dialog .oa-window{position:absolute;inset:0;margin:auto;width:min(820px,calc(100vw - 24px));height:min(650px,calc(100vh - 24px));background:white;border-radius:11px;box-shadow:0 12px 56px #0005;display:flex;flex-direction:column;overflow:hidden}
+#oa-dialog .oa-head{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:#edf4f9;border-bottom:1px solid #d4e2eb;font-weight:700;font-size:18px}
+#oa-dialog button{font:inherit;cursor:pointer}
+#oa-dialog .oa-close{border:0;background:transparent;font-size:28px}
+#oa-dialog .oa-grid{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0;flex:1}
+#oa-dialog .oa-nav{padding:12px;background:#f7f9fb;display:flex;flex-direction:column;gap:5px;border-right:1px solid #dce5ec}
+#oa-dialog .oa-nav button{padding:10px;border:0;border-radius:6px;text-align:left;background:transparent;color:#294e68}
+#oa-dialog .oa-nav button[aria-current=page]{background:#dcecf7;font-weight:bold}
+#oa-dialog .oa-content{padding:22px;overflow:auto}
+#oa-dialog .oa-content h2{font-size:21px;margin:0 0 14px}
+#oa-dialog .oa-content p{line-height:1.5}
+#oa-dialog .oa-content label{display:flex;gap:10px;align-items:center;margin:16px 0}
+#oa-dialog .oa-content input[type=checkbox]{width:19px;height:19px}
+#oa-dialog .oa-content a{color:#146392}
+#oa-dialog .oa-foot{background:#f7fafc;padding:10px 16px;font-size:12px;color:#526c80;border-top:1px solid #dce5ec}
+#oa-launcher{display:inline-flex;align-items:center;vertical-align:middle;justify-content:center;border:0;background:transparent;cursor:pointer;border-radius:6px;padding:2px}
+#oa-launcher:hover{background:#e5f0f7}
+#oa-launcher img{width:30px;height:30px;object-fit:contain}
+@media(max-width:600px){#oa-dialog .oa-grid{display:flex;flex-direction:column}#oa-dialog .oa-nav{flex-direction:row;overflow:auto;flex-shrink:0;border-right:0;border-bottom:1px solid #dce5ec}#oa-dialog .oa-nav button{white-space:nowrap}}
+`;
+document.head.append(oaStyle);
+const oaDialog=oaElement('div');oaDialog.id='oa-dialog';oaDialog.hidden=true;
+oaDialog.innerHTML='<div class="oa-shade"></div><section class="oa-window" role="dialog" aria-modal="true" aria-label="OpenApurin asetukset"><header class="oa-head"><span>OpenApuri · Asetukset</span><button class="oa-close" type="button" aria-label="Sulje">×</button></header><div class="oa-grid"><nav class="oa-nav" aria-label="Moduulien asetukset"></nav><div class="oa-content" tabindex="-1"></div></div><footer class="oa-foot">Asetukset tallentuvat Wilman selaintallennukseen. Muutokset tulevat voimaan viimeistään sivun päivityksen jälkeen.</footer></section>';
+document.body.append(oaDialog);
+let oaReturnFocus=null;
+function oaRender(id){
+ const nav=oaDialog.querySelector('.oa-nav'),main=oaDialog.querySelector('.oa-content');
+ nav.replaceChildren();main.replaceChildren();
+ for(const [key,title]of OA_MODULES){
+  const button=oaElement('button',title);button.type='button';
+  if(key===id)button.setAttribute('aria-current','page');
+  button.onclick=()=>oaRender(key);nav.append(button);
+ }
+ const entry=OA_MODULES.find(x=>x[0]===id)||OA_MODULES[0];
+ main.append(oaElement('h2',entry[1]),oaElement('p',entry[2]));
+ const labeledToggle=(key,txt,checked,onchange)=>{
+  const label=oaElement('label'),input=oaElement('input');input.type='checkbox';
+  input.checked=checked;input.onchange=()=>onchange(input.checked);
+  label.append(input,oaElement('span',txt));main.append(label);
+ };
+ const link=(txt,url)=>{
+  const a=oaElement('a',txt);a.href=url;a.target='_blank';a.rel='noopener noreferrer';main.append(a);
+ };
+ if(id==='general'){
+  const label=oaElement('label','Kieli');
+  const select=oaElement('select');
+  for(const [key,title]of [['fi','Suomi'],['en','English']]){
+   const op=oaElement('option',title);op.value=key;select.append(op);
+  }
+  select.value=oaGlobal().lang==='en'?'en':'fi';
+  select.onchange=()=>{lang=select.value;localStorage.setItem(KEY,JSON.stringify({...oaGlobal(),lang}));draw()};
+  label.append(select);main.append(label);
+ }else{
+  labeledToggle(id,'Moduuli käytössä',oaRead()[id]!==false,v=>{oaWrite(id,v);if(id==='toolbar')draw()});
+  if(id==='progress'){
+   labeledToggle('progressEnabled','Opintoseuranta aktiivinen',oaGlobal().enabled!==false,v=>localStorage.setItem(KEY,JSON.stringify({...oaGlobal(),enabled:v})));
+   main.append(oaElement('p','Opintoseurannan asetukset ja piilotettujen opintojaksojen valinnat säilyvät paikallisesti.'));
+   link('Avaa ryhmäluettelo','/groups');
+  }
+  if(id==='search')link('Avaa haku','/profiles/students/#opiskelijahaku');
+  if(id==='draftsChrome'||id==='draftsAndroid'){
+   main.append(oaElement('p','Luonnoksia muokataan Wilman viestikirjastossa. Niitä ei lähetetä erilliselle palvelimelle.'));
+   link('Avaa viestit','/messages/compose');
+  }
+  if(id==='toolbar')main.append(oaElement('p','Kuvake ja asetukset-valikko pysyvät käytössä, vaikka alapalkki piilotetaan.'));
+ }
+ main.focus();
+}
+function oaOpen(tab='general'){
+ if(oaDialog.hidden)oaReturnFocus=document.activeElement;
+ oaDialog.hidden=false;oaRender(tab);
+ oaDialog.querySelector('.oa-close').focus();
+}
+function oaClose(){oaDialog.hidden=true;oaReturnFocus?.focus?.()}
+oaDialog.querySelector('.oa-close').onclick=oaClose;
+oaDialog.querySelector('.oa-shade').onclick=oaClose;
+oaDialog.addEventListener('keydown',e=>{
+ if(e.key==='Escape'){e.preventDefault();oaClose()}
+ if(e.key==='Tab'){
+  const focusables=[...oaDialog.querySelectorAll('button,a[href],select,input')].filter(el=>el.getClientRects().length);
+  if(!focusables.length)return;
+  if(e.shiftKey&&document.activeElement===focusables[0]){e.preventDefault();focusables[focusables.length-1].focus()}
+  else if(!e.shiftKey&&document.activeElement===focusables[focusables.length-1]){e.preventDefault();focusables[0].focus()}
+ }
+});
+window.addEventListener('openapuri:open-settings',e=>oaOpen(e.detail?.tab||'general'));
+const oaLauncher=oaElement('button');oaLauncher.id='oa-launcher';oaLauncher.type='button';oaLauncher.title='OpenApuri · Asetukset';
+oaLauncher.setAttribute('aria-label','Avaa OpenApurin asetukset');
+const oaImg=oaElement('img');oaImg.alt='OpenApuri';oaImg.src=OA_LOGO;oaLauncher.append(oaImg);
+oaLauncher.onclick=()=>oaOpen();
+function placeLauncher(){
+ const logo=document.querySelector('header .navbar-brand, nav .navbar-brand, .navbar-header .navbar-brand, header a.brand, #header .logo, .navbar-brand');
+ if(!logo)return false;
+ logo.insertAdjacentElement('afterend',oaLauncher);
+ oaLauncher.style.cssText='';
+ return true;
+}
+if(!placeLauncher()){
+ oaLauncher.style.cssText='position:fixed;top:8px;right:12px;background:#fff;z-index:2147483000;border:1px solid #c6d8e3';
+ document.body.append(oaLauncher);
+ let tries=0;const interval=setInterval(()=>{if(placeLauncher()||++tries>20)clearInterval(interval)},500);
+}
+
 const savedGrade=()=>{const value=localStorage.getItem(lastKey)||'';return /^\/profiles\/students\/\d+\/choices(?:\/?|\/?\?.*)$/.test(value)?value:null};
 const route=()=>grade.test(location.pathname)?location.pathname+'?view=gradebook':savedGrade();
 function linkProgress(){if(/^\/profiles\/classes\/\d+\/?$/.test(location.pathname)){document.querySelector('#wt-class-assessment-tab a')?.click();return}location.assign('/')}
@@ -54,6 +177,7 @@ function templateEditor(){openMessageLibrary('templates')}
 function draftSidebar(){openMessageLibrary('drafts')}
 function draw(){
  panel.replaceChildren();
+ if(oaRead().toolbar===false){panel.style.display='none';return}else panel.style.display='';
  const heading=label('h2','OpenApuri');panel.append(heading);
  const commands=[
   [lang==='fi'?'Kirjoita viesti':'Compose',()=>location.assign('/messages/compose')],
@@ -66,6 +190,7 @@ function draw(){
  language.value=lang;language.setAttribute('aria-label','Kieli');
  language.onchange=()=>{lang=language.value;let settings={};try{settings=JSON.parse(localStorage.getItem(KEY)||'{}')}catch{}settings.lang=lang;localStorage.setItem(KEY,JSON.stringify(settings));draw()};
  panel.append(language);
+ const settings=label('button',lang==='fi'?'Asetukset':'Settings');settings.type='button';settings.onclick=()=>oaOpen();panel.append(settings);
 }
 draw();
 window.addEventListener('openapuri:open-templates',()=>templateEditor());
