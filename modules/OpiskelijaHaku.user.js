@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.6.9
+// @version      0.6.10
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
@@ -13,6 +13,9 @@
 // ==/UserScript==
 (() => {
 'use strict';
+// Per-module state controlled by OpenApuri's in-app settings menu.
+try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').search===false)return;}catch{}
+
 // One-time compatible copy of older local data; never overwrite OpenApuri values.
 try {
   const prefix='wilma'+'tools.';
