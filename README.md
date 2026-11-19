@@ -6,7 +6,7 @@ OpenApuri on avoimen lähdekoodin kokoelma Wilman selaintyökaluja. Projekti ei 
 
 ## Asennus — yksi skripti
 
-**Asenna vain [OpenApuri 1.0.2](https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuri.user.js).** Skripti toimii Wilman sivuilla Tampermonkeyssa. Se sisältää kaikki moduulit samassa asennuksessa:
+**Asenna vain [OpenApuri 1.0.3](https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuri.user.js).** Skripti toimii Wilman sivuilla Tampermonkeyssa. Se sisältää kaikki moduulit samassa asennuksessa:
 
 | Moduuli | Käyttö |
 | --- | --- |
@@ -246,6 +246,16 @@ OpenApurin työkalupalkin versiosta 0.23.2 alkaen Wilman logon vieressä näkyy 
 Asetusikkunan OpiskelijaHaku-näkymässä on `Avaa OpiskelijaHaku Wilmassa` -painike, joka vie nykyisen välilehden osoitteeseen `/profiles/students/#opiskelijahaku`. Jos moduuli oli pois käytöstä vain OpenApurin omassa asetustallennuksessa, se aktivoidaan samalla. Myös alapalkkiin lisättiin OpiskelijaHaku-pikatoiminto. Moduulin käyttöönottokytkin ei asenna skriptiä eikä voi käynnistää Tampermonkeyn kokonaan pois kytkemää skriptiä. Työkalupalkin päivitysosoitteet käyttävät nyt `ljrant/OpenApuri`-repon polkua.
 
 
-## OpenApuri 1.0.2 — yhdistetty käyttäjäskripti
+## OpenApuri 1.0.3 — yhdistetty käyttäjäskripti
 
 Kaikki viisi alkuperäistä Wilma-moduulia toimitetaan nyt yhden `OpenApuri.user.js`-skriptin mukana. Pääskripti suoritetaan `document-start`-vaiheessa, jotta viestiluonnosten tallennus käynnistyy riittävän aikaisin; käyttöliittymän moduulit käynnistetään vasta dokumentin valmistuttua. Kukin moduuli tarkistaa OpenApurin sisäisen `openapuri.modules.v1`-kytkimensä. Moduulien välille lisätyt käynnistyslukot vähentävät päällekkäistä käynnistymistä, mutta aiemmat erillisskriptit kannattaa poistaa käytöstä. Logo avaa sisäiset moduuliasetukset; erillistä HTML-asetussivua ei käytetä. Abitti-integraatio vaatii edelleen kyseisen palvelun osoitteen ja käyttöliittymärakenteen varmistamisen.
+
+
+## OpenApuri 1.0.3 – yhtenäinen tunnisteväri ja logo
+
+- `OpenApuriLogo.svg` sijoitetaan Wilman alkuperäisen logon välittömään viereen samaan logoryhmään. Kuvaa näytetään aiempaa suurempana (yleensä 60–84 px; pienillä näytöillä 54 px). Kuvaketta painamalla avautuu OpenApurin sisäinen asetusvalikko.
+- Kun OpenApurin käyttäjäskripti on käynnissä, Wilman yläosan brändipalkki värjäytyy sinivihreäksi ja sen alareunaan lisätään turkoosi aktiivisuustunniste. Muutoin Wilman omat sivut ja navigaatio säilytetään alkuperäisinä.
+- Vain OpenApurin omat käyttöliittymäosat, kuten OpiskelijaHaun välilehti/kortti ja opintoseurannan välilehti, tunnistetaan vihertävällä taustalla ja värillisellä reunuksella. Värityksellä erotetaan OpenApurin lisäykset Wilman natiiveista elementeistä.
+- GitHub Pagesin `index.html` käyttää samaa tumman sinivihreää / turkoosia värimaailmaa ja OpenApurin SVG-logoa. Asetuksia ei edelleenkään ole erillisenä verkkosivuna, vaan ne avautuvat Wilmassa kuvaketta napsauttamalla.
+
+**Huom.** Ulkoasu on tarkistettu kooditasolla, mutta Wilman todellisen otsake-HTML:n sijainnin ja toimivuuden varmistaminen edellyttää selaintestausta.
