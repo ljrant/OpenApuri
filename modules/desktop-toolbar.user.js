@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.8
+// @version      0.24.9
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -93,10 +93,16 @@ oaStyle.textContent=`
 #oh-home>.panel-heading{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
 #oh-panel{border:2px solid #238d83!important;border-radius:8px!important;background:#f9fffc!important;padding:14px!important}
 #oh-panel>h2{background:#e0f5eb!important;color:#075b50!important;margin:-14px -14px 12px!important;padding:13px 16px!important;border-bottom:2px solid #9cd7c5!important}
-/* Match Wilma's built-in tab graphics and active green border exactly.
-   The native nav-tabs-primary rules render the middle and sloped side images
-   on the anchor and its pseudo-elements; do not override their geometry. */
-ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a{color:#096b5c!important}
+/* Retain Wilma's native tab sprites, dimensions and green active outline.
+   Tint their painted areas mint using multiply blending rather than replacing
+   the native middle/side background images with rectangular CSS shapes. */
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a,
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a::before,
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a::after{
+  background-color:#e5f5ed!important;
+  background-blend-mode:multiply!important;
+}
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a{color:#096b5c!important;font-weight:600!important}
 ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a:hover{color:#075b50!important}
 ul.nav-tabs.nav-tabs-primary>li.oa-added-tab.active>a{color:#096b5c!important}
 #wt-panel{border:2px solid #238d83!important}
