@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.6.12
+// @version      0.6.13
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
@@ -100,9 +100,10 @@ if(homePage){
 const tabs=$('main#main-content ul.nav.nav-tabs-primary')||$('ul.nav.nav-tabs-primary');
 if(!tabs){console.warn('[OpiskelijaHaku] Välilehtipalkkia ei löydy');return}
 const li=make('li');li.id='oh-tab';li.classList.add('oa-added-tab');
-const link=make('a','','OpiskelijaHaku');const mark=document.createElement('span');mark.className='oa-tab-mark';mark.setAttribute('aria-hidden','true');mark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';link.prepend(mark);
+const link=make('a','','Haku');
 link.href=directoryPage?'#opiskelijahaku':'/profiles/students/#opiskelijahaku';
 link.setAttribute('role','tab');li.append(link);
+const searchPeeker=document.createElement('button');searchPeeker.type='button';searchPeeker.className='oa-peeker-settings';searchPeeker.title='OpenApuri · Asetukset';searchPeeker.setAttribute('aria-label','Avaa OpenApurin Haun asetukset');searchPeeker.style.cssText='position:absolute;top:-20px;right:11px;width:38px;height:37px;padding:0;margin:0;border:0;background:transparent;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center';const searchPeekerImg=document.createElement('img');searchPeekerImg.src='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriPeeker.png';searchPeekerImg.alt='';searchPeekerImg.style.cssText='display:block;width:38px;height:38px;object-fit:contain;pointer-events:none';searchPeeker.append(searchPeekerImg);searchPeeker.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'search'}}))});li.append(searchPeeker);
 tabs.insertBefore(li,$('.tabdrop',tabs));
 if(!directoryPage)return; // Student profiles: keep Wilma's own tabs and navigate to the search.
 const native=$('main#main-content .panel.tab-content')||$('.panel.tab-content');
