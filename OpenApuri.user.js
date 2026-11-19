@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.5
+// @version      1.0.6
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -2395,9 +2395,9 @@ oaStyle.textContent=`
 #oa-dialog .oa-content input[type=checkbox]{width:19px;height:19px}
 #oa-dialog .oa-content a{color:#146392}
 #oa-dialog .oa-foot{background:#f7fafc;padding:10px 16px;font-size:12px;color:#526c80;border-top:1px solid #dce5ec}
-#oa-launcher{display:inline-flex!important;align-items:center!important;vertical-align:middle;justify-content:center!important;border:0!important;background:transparent!important;cursor:pointer;border-radius:6px;padding:0 3px!important;flex:0 0 auto;line-height:1;height:40px!important;max-height:40px!important;box-sizing:border-box!important}
+#oa-launcher{display:inline-flex!important;align-items:center!important;vertical-align:middle;justify-content:center!important;border:0!important;background:transparent!important;cursor:pointer;border-radius:0!important;padding:0!important;flex:0 0 auto;line-height:1;height:40px!important;max-height:40px!important;box-sizing:border-box!important}
 #oa-launcher:hover,#oa-launcher:focus-visible{background:#ffffff26!important;outline:2px solid #b6e9e0;outline-offset:1px}
-#oa-launcher img{display:block!important;width:36px!important;height:36px!important;min-width:0!important;min-height:0!important;max-width:36px!important;max-height:36px!important;object-fit:contain}
+#oa-launcher img{display:block!important;width:40px!important;height:40px!important;min-width:0!important;min-height:0!important;max-width:40px!important;max-height:40px!important;object-fit:contain;transform:scale(1.08);transform-origin:center}
 #oa-brand-group{display:inline-flex!important;align-items:center!important;gap:3px!important;flex:0 0 auto!important;min-width:max-content;vertical-align:middle}
 #oa-brand-group>.navbar-brand,#oa-brand-group>a:not(#oa-launcher){float:none!important;display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;width:max-content!important;min-width:0!important;max-width:none!important;padding-left:4px!important;padding-right:4px!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box!important}
 #oa-brand-group>.navbar-brand img,#oa-brand-group>a:not(#oa-launcher) img{max-height:40px!important;width:auto!important;object-fit:contain}
@@ -2422,7 +2422,7 @@ oaStyle.textContent=`
 #oh-panel .oh-recipient-panel{background:#eaf8f2!important;border:1px solid #7bbdaa!important}
 #oh-panel .oh-action{background:#147c6e!important;color:#fff!important;border-color:#147c6e!important}
 #wt-message-library{border-left:4px solid #168b80!important}
-@media(max-width:600px){#oa-launcher{height:36px!important;max-height:36px!important}#oa-launcher img{width:32px!important;height:32px!important;max-width:32px!important;max-height:32px!important}#oa-brand-group{gap:2px!important}}
+@media(max-width:600px){#oa-launcher{height:36px!important;max-height:36px!important}#oa-launcher img{width:36px!important;height:36px!important;max-width:36px!important;max-height:36px!important}#oa-brand-group{gap:2px!important}}
 @media(max-width:600px){#oa-dialog .oa-grid{display:flex;flex-direction:column}#oa-dialog .oa-nav{flex-direction:row;overflow:auto;flex-shrink:0;border-right:0;border-bottom:1px solid #dce5ec}#oa-dialog .oa-nav button{white-space:nowrap}}
 `;
 document.head.append(oaStyle);
