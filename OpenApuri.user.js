@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.13
+// @version      1.0.14
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -2422,7 +2422,13 @@ oaStyle.textContent=`
 ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a{color:#096b5c!important;font-weight:600!important}
 ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a:hover{color:#075b50!important}
 ul.nav-tabs.nav-tabs-primary>li.oa-added-tab.active>a{color:#096b5c!important}
-ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a>.oa-tab-mark{display:inline-block!important;width:7px!important;height:7px!important;min-width:7px!important;margin:0 6px 1px 0!important;vertical-align:middle!important;border-radius:50%!important;background:#21a995!important;box-shadow:0 0 0 1px #087266!important}
+/* Peeking monkey is a separate settings button, not nested inside a tab link. */
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab{position:relative!important;overflow:visible!important}
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a{padding-right:33px!important}
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>.oa-peeker-settings{position:absolute!important;display:flex!important;align-items:center!important;justify-content:center!important;top:-20px!important;right:11px!important;width:38px!important;height:37px!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;z-index:30!important;overflow:visible!important}
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>.oa-peeker-settings img{display:block!important;width:38px!important;height:38px!important;object-fit:contain!important;pointer-events:none!important}
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>.oa-peeker-settings:hover{transform:translateY(-3px)!important}
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>.oa-peeker-settings:focus-visible{outline:2px solid #167b69!important;outline-offset:1px!important}
 #wt-panel{border:2px solid #238d83!important}
 #wt-header{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
 #oh-panel .oh-recipient-panel{background:#eaf8f2!important;border:1px solid #7bbdaa!important}
@@ -2551,7 +2557,7 @@ function placeLauncher(){
     group=document.createElement(navbar.tagName==='UL'||navbar.tagName==='OL'?'li':'span');
     group.id='oa-brand-group';
   }
-  item.after(group);
+  item.before(group);
   group.append(logo);
   group.append(oaLauncher);
   oaLauncher.style.cssText='';
@@ -2975,15 +2981,17 @@ function installAssessmentTab(){
  const tabs=tabStrip();
  if(!tabs||document.getElementById('wt-class-assessment-tab'))return;
  const item=document.createElement('li');item.id='wt-class-assessment-tab';item.classList.add('oa-added-tab');
- const link=el('a',cfg.lang==='fi'?'Arviointinäkymä':'Grade overview');const mark=document.createElement('span');mark.className='oa-tab-mark';mark.setAttribute('aria-hidden','true');mark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';link.prepend(mark);
+ const link=el('a',cfg.lang==='fi'?'Arviointinäkymä':'Grade overview');
  link.href=classBase+'#wt-assessment';
  link.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment()});
  item.append(link);
+ const progressPeeker=document.createElement('button');progressPeeker.type='button';progressPeeker.className='oa-peeker-settings';progressPeeker.title='OpenApuri · Asetukset';progressPeeker.setAttribute('aria-label','Avaa OpenApurin Opintoseurannan asetukset');progressPeeker.style.cssText='position:absolute;top:-20px;right:11px;width:38px;height:37px;padding:0;margin:0;border:0;background:transparent;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center';const progressPeekerImg=document.createElement('img');progressPeekerImg.src='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriPeeker.png';progressPeekerImg.alt='';progressPeekerImg.style.cssText='display:block;width:38px;height:38px;object-fit:contain;pointer-events:none';progressPeeker.append(progressPeekerImg);progressPeeker.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'progress'}}))});item.append(progressPeeker);
  const issuesItem=document.createElement('li');issuesItem.id='wt-class-issues-tab';issuesItem.classList.add('oa-added-tab');
- const issuesLink=el('a',cfg.lang==='fi'?'Huomiot':'Issues');const issueMark=document.createElement('span');issueMark.className='oa-tab-mark';issueMark.setAttribute('aria-hidden','true');issueMark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';issuesLink.prepend(issueMark);issuesLink.href=classBase+'#wt-issues';
+ const issuesLink=el('a',cfg.lang==='fi'?'Huomiot':'Issues');issuesLink.href=classBase+'#wt-issues';
  
  issuesLink.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment('issues')});
  issuesItem.append(issuesLink);
+ const issuesPeeker=document.createElement('button');issuesPeeker.type='button';issuesPeeker.className='oa-peeker-settings';issuesPeeker.title='OpenApuri · Asetukset';issuesPeeker.setAttribute('aria-label','Avaa OpenApurin Opintoseurannan asetukset');issuesPeeker.style.cssText='position:absolute;top:-20px;right:11px;width:38px;height:37px;padding:0;margin:0;border:0;background:transparent;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center';const issuesPeekerImg=document.createElement('img');issuesPeekerImg.src='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriPeeker.png';issuesPeekerImg.alt='';issuesPeekerImg.style.cssText='display:block;width:38px;height:38px;object-fit:contain;pointer-events:none';issuesPeeker.append(issuesPeekerImg);issuesPeeker.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'progress'}}))});issuesItem.append(issuesPeeker);
  const support=[...tabs.querySelectorAll('a')].find(a=>/Tuen tilastot|Support statistics/i.test(a.textContent));
  if(support){
   const dropdown=support.closest('li.dropdown');
@@ -3215,9 +3223,10 @@ if(homePage){
 const tabs=$('main#main-content ul.nav.nav-tabs-primary')||$('ul.nav.nav-tabs-primary');
 if(!tabs){console.warn('[OpiskelijaHaku] Välilehtipalkkia ei löydy');return}
 const li=make('li');li.id='oh-tab';li.classList.add('oa-added-tab');
-const link=make('a','','OpiskelijaHaku');const mark=document.createElement('span');mark.className='oa-tab-mark';mark.setAttribute('aria-hidden','true');mark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';link.prepend(mark);
+const link=make('a','','Haku');
 link.href=directoryPage?'#opiskelijahaku':'/profiles/students/#opiskelijahaku';
 link.setAttribute('role','tab');li.append(link);
+const searchPeeker=document.createElement('button');searchPeeker.type='button';searchPeeker.className='oa-peeker-settings';searchPeeker.title='OpenApuri · Asetukset';searchPeeker.setAttribute('aria-label','Avaa OpenApurin Haun asetukset');searchPeeker.style.cssText='position:absolute;top:-20px;right:11px;width:38px;height:37px;padding:0;margin:0;border:0;background:transparent;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center';const searchPeekerImg=document.createElement('img');searchPeekerImg.src='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriPeeker.png';searchPeekerImg.alt='';searchPeekerImg.style.cssText='display:block;width:38px;height:38px;object-fit:contain;pointer-events:none';searchPeeker.append(searchPeekerImg);searchPeeker.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'search'}}))});li.append(searchPeeker);
 tabs.insertBefore(li,$('.tabdrop',tabs));
 if(!directoryPage)return; // Student profiles: keep Wilma's own tabs and navigate to the search.
 const native=$('main#main-content .panel.tab-content')||$('.panel.tab-content');
