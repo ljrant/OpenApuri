@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.18
+// @version      1.0.19
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
