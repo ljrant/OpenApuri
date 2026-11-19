@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.6.14
+// @version      0.6.15
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
@@ -762,7 +762,8 @@ openMessage.onclick=()=>composeForSelection(chosen(),{students:kinds.students.ch
 renderPicked();renderChoices();
 if(directoryPage){
   const params=new URLSearchParams(location.search);
-  filter.value=params.get('oh_q')||'';
+  let pending=null;try{pending=sessionStorage.getItem('openapuri.pendingSearch.v1');sessionStorage.removeItem('openapuri.pendingSearch.v1')}catch{}
+  filter.value=pending!==null?pending:(params.get('oh_q')||'');
   link.click();
   if(filter.value)readDirectory();
   if(embedPage){
