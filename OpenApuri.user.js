@@ -2980,7 +2980,7 @@ function installAssessmentTab(){
  link.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment()});
  item.append(link);
  const issuesItem=document.createElement('li');issuesItem.id='wt-class-issues-tab';issuesItem.classList.add('oa-added-tab');
- const issuesLink=el('a',cfg.lang==='fi'?'Huomiot':'Issues');const issueMark=document.createElement('span');issueMark.className='oa-tab-issueMark';issueMark.setAttribute('aria-hidden','true');issueMark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';issuesLink.prepend(issueMark);issuesLink.href=classBase+'#wt-issues';
+ const issuesLink=el('a',cfg.lang==='fi'?'Huomiot':'Issues');const issueMark=document.createElement('span');issueMark.className='oa-tab-mark';issueMark.setAttribute('aria-hidden','true');issueMark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';issuesLink.prepend(issueMark);issuesLink.href=classBase+'#wt-issues';
  
  issuesLink.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment('issues')});
  issuesItem.append(issuesLink);
