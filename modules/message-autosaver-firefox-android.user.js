@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         WilmaTools - Message Autosaver (Firefox Android)
-// @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.6.0
+// @name         OpenApuri - Message Autosaver (Firefox Android)
+// @namespace    https://github.com/ljrant/OpenApuri
+// @version      0.6.1
 // @description  Firefox Android local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
