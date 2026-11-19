@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.6.13
+// @version      0.6.14
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
@@ -103,7 +103,6 @@ const li=make('li');li.id='oh-tab';li.classList.add('oa-added-tab');
 const link=make('a','','Haku');
 link.href=directoryPage?'#opiskelijahaku':'/profiles/students/#opiskelijahaku';
 link.setAttribute('role','tab');li.append(link);
-const searchPeeker=document.createElement('button');searchPeeker.type='button';searchPeeker.className='oa-peeker-settings';searchPeeker.title='OpenApuri · Asetukset';searchPeeker.setAttribute('aria-label','Avaa OpenApurin Haun asetukset');searchPeeker.style.cssText='position:absolute;top:-20px;right:11px;width:38px;height:37px;padding:0;margin:0;border:0;background:transparent;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center';const searchPeekerImg=document.createElement('img');searchPeekerImg.src='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriPeeker.png';searchPeekerImg.alt='';searchPeekerImg.style.cssText='display:block;width:38px;height:38px;object-fit:contain;pointer-events:none';searchPeeker.append(searchPeekerImg);searchPeeker.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'search'}}))});li.append(searchPeeker);
 tabs.insertBefore(li,$('.tabdrop',tabs));
 if(!directoryPage)return; // Student profiles: keep Wilma's own tabs and navigate to the search.
 const native=$('main#main-content .panel.tab-content')||$('.panel.tab-content');
@@ -114,6 +113,8 @@ function changeTab(enabled){active=enabled;panel.hidden=!enabled;native.style.di
 link.onclick=e=>{e.preventDefault();$$('li.active',tabs).forEach(n=>n.classList.remove('active'));changeTab(true);renderChoices()};
 tabs.addEventListener('click',e=>{if(!e.target.closest('#oh-tab')&&e.target.closest('a'))changeTab(false)});
 panel.append(make('h2','','Opiskelija- ja opettajahaku'),make('p','oh-help','Hae opiskelijoita tai henkilökuntaa nimellä, valitse henkilöt ja tarkastele työjärjestysten opintojaksoja, ajankohtia ja opetustiloja.'));
+const searchPeeker=document.createElement('button');searchPeeker.type='button';searchPeeker.className='oa-peeker-settings';searchPeeker.title='OpenApuri · Asetukset';searchPeeker.setAttribute('aria-label','Avaa OpenApurin asetukset');searchPeeker.style.cssText='position:absolute;right:18px;bottom:-6px;top:auto;width:45px;height:46px;padding:0;margin:0;border:0;background:transparent;cursor:pointer;z-index:40;display:flex;align-items:center;justify-content:center';const searchPeekerImg=document.createElement('img');searchPeekerImg.src='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriPeeker.png';searchPeekerImg.alt='';searchPeekerImg.style.cssText='display:block;width:45px;height:46px;object-fit:contain;pointer-events:none';searchPeeker.append(searchPeekerImg);searchPeeker.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'search'}}))});
+const searchHeading=panel.querySelector('h2');searchHeading.style.position='relative';searchHeading.style.paddingRight='78px';searchHeading.append(searchPeeker);
 const chooser=make('div','oh-chooser'),chooserLabel=make('label'),filter=make('input');
 filter.type='search';filter.placeholder='Hae opiskelijaa tai henkilökuntaa nimellä…';filter.autocomplete='off';
 chooserLabel.append(make('strong','','Etsi henkilöä'),filter);chooser.append(chooserLabel);
