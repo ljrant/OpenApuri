@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.6.10
+// @version      0.6.11
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
@@ -99,7 +99,7 @@ if(homePage){
 }
 const tabs=$('main#main-content ul.nav.nav-tabs-primary')||$('ul.nav.nav-tabs-primary');
 if(!tabs){console.warn('[OpiskelijaHaku] Välilehtipalkkia ei löydy');return}
-const li=make('li');li.id='oh-tab';
+const li=make('li');li.id='oh-tab';li.classList.add('oa-added-tab');
 const link=make('a','','OpiskelijaHaku');
 link.href=directoryPage?'#opiskelijahaku':'/profiles/students/#opiskelijahaku';
 link.setAttribute('role','tab');li.append(link);
