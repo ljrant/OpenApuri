@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.15
+// @version      0.24.16
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -51,6 +51,7 @@ const OA_MODULES=[
  ['general','Yleiset','Kaikkien moduulien yhteiset asetukset'],
  ['progress','Opintoseuranta','Ryhmänohjaajan opintoseuranta'],
  ['search','OpiskelijaHaku','Opiskelijoiden ja henkilökunnan haku'],
+ ['seating','Istumajärjestys','Pöytäjärjestykset, arvonta ja yhdistelmäryhmät'],
  ['draftsChrome','Viestiluonnokset · Chrome','Viestien tallennus tietokoneella'],
  ['draftsAndroid','Viestiluonnokset · Android','Viestien tallennus Firefox Androidissa'],
  ['toolbar','Työkalupalkki','Wilman OpenApuri-toiminnot']
@@ -195,6 +196,11 @@ function oaRender(id){
    main.append(oaElement('p','Opintoseurannan asetukset ja piilotettujen opintojaksojen valinnat säilyvät paikallisesti.'));
    launch('Avaa ryhmäluettelo','/groups','progress');
   }
+  if(id==='seating'){
+   const groupMatch=location.pathname.match(/^\/groups\/(\d+)(?:\/|$)/);
+   launch('Avaa istumajärjestys',groupMatch?'/groups/'+groupMatch[1]+'/seating':'/groups','seating');
+   main.append(oaElement('p','Istumajärjestykset ovat osa OpenApuria. Ryhmäkohtainen näkymä löytyy Wilman ryhmäsivulta.'));
+  }
   if(id==='search'){
    launch('Avaa OpiskelijaHaku Wilmassa','/profiles/students/#opiskelijahaku','search');
    main.append(oaElement('p','Haku avautuu suoraan Wilman opiskelijaluettelossa. Jos OpiskelijaHaku on poistettu käytöstä vain OpenApurin asetuksista, painike ottaa sen samalla takaisin käyttöön.'));
@@ -319,6 +325,7 @@ function draw(){
  };
  panel.append(searchForm);
  const commands=[
+  [lang==='fi'?'Istumajärjestys':'Seating',()=>{const match=location.pathname.match(/^\/groups\/(\d+)(?:\/|$)/);location.assign(match?'/groups/'+match[1]+'/seating':'/groups')}],
   [lang==='fi'?'Kirjoita viesti':'Compose',()=>location.assign('/messages/compose')],
   [lang==='fi'?'Viestipohjat':'Templates',()=>templateEditor()],
   [lang==='fi'?'Luonnokset':'Drafts',()=>draftSidebar()]
