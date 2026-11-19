@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         WilmaTools - Message Autosaver (Chrome Desktop)
-// @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.16.16
+// @name         OpenApuri - Message Autosaver (Chrome Desktop)
+// @namespace    https://github.com/ljrant/OpenApuri
+// @version      0.16.17
 // @description  Chrome desktop local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
@@ -10,13 +10,23 @@
 
 (function () {
     'use strict';
+// One-time compatible copy of older local data; never overwrite OpenApuri values.
+try {
+  const prefix='wilma'+'tools.';
+  for(const key of ['settings','lastGradebook','messageTemplates.v1','draftHistory.v1','composeRequest.v1','draftRestore.v1','sentTemplateImport.v1']){
+    const target='openapuri.'+key;
+    const old=localStorage.getItem(prefix+key);
+    if(old!==null&&localStorage.getItem(target)===null)localStorage.setItem(target,old);
+  }
+} catch(e){console.warn('[OpenApuri] Aiemman tallennustiedon kopiointi ei onnistunut:',e)}
+
     // Only activate the intended browser variant, avoiding two simultaneous autosavers.
     const ua = navigator.userAgent;
     if ( /Android|iPhone|iPad|iPod/i.test(ua) || !/Chrome|Chromium/i.test(ua) || /Edg\//i.test(ua)) return;
 
     // Drafts are sensitive: stored only on this origin in localStorage; clear after sending.
     const STORAGE_KEY = 'wilma-compose-autosave:' + location.hostname + location.pathname;
-    const HISTORY_KEY='wilmatools.draftHistory.v1', TEMPLATE_KEY='wilmatools.messageTemplates.v1', REQUEST_KEY='wilmatools.composeRequest.v1';
+    const HISTORY_KEY='openapuri.draftHistory.v1', TEMPLATE_KEY='openapuri.messageTemplates.v1', REQUEST_KEY='openapuri.composeRequest.v1';
 
     const SEL = {
         subject: 'input#wff-Subject',
@@ -281,7 +291,7 @@
       const raw=String(html||'');
       const value=/<[a-z][\s\S]*>/i.test(raw)?raw:raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\r?\n/g,'<br>');
       const textarea=$(SEL.bodyTextarea);
-      const token=Symbol('wilmatools-editor-write');
+      const token=Symbol('openapuri-editor-write');
       setBodyHtml.pending=token;
       let tries=0;
       const attempt=()=>{
@@ -298,14 +308,14 @@
                 editor.updateElement();
                 editor.fire('change');
                 const actual=editor.getData();
-                if(!actual.trim()&&value.trim())console.warn('[WilmaTools] Editor returned empty content after setData');
-              }catch(e){console.warn('[WilmaTools] CKEditor post-load check:',e)}
+                if(!actual.trim()&&value.trim())console.warn('[OpenApuri] Editor returned empty content after setData');
+              }catch(e){console.warn('[OpenApuri] CKEditor post-load check:',e)}
               setBodyHtml.pending=null;
             },
             noSnapshot:false
           });
           return true;
-        }catch(e){console.warn('[WilmaTools] CKEditor setData:',e);return false}
+        }catch(e){console.warn('[OpenApuri] CKEditor setData:',e);return false}
       };
       if(attempt())return;
       const wait=setInterval(()=>{
@@ -313,8 +323,8 @@
         if(++tries>=60){
           clearInterval(wait);
           const instance=getCkeditorInstance();
-          console.warn('[WilmaTools] Editor diagnostic:',{hasCKEditor:!!window.CKEDITOR,instanceNames:Object.keys(window.CKEDITOR?.instances||{}),status:instance?.status||'missing',hasSetData:typeof instance?.setData==='function'});
-          alert('Viestitekstin lataus epäonnistui. Avaa konsoli ja lähetä WilmaTools Editor diagnostic -tulos.');
+          console.warn('[OpenApuri] Editor diagnostic:',{hasCKEditor:!!window.CKEDITOR,instanceNames:Object.keys(window.CKEDITOR?.instances||{}),status:instance?.status||'missing',hasSetData:typeof instance?.setData==='function'});
+          alert('Viestitekstin lataus epäonnistui. Avaa konsoli ja lähetä OpenApuri Editor diagnostic -tulos.');
         }
       },250);
     }
@@ -676,7 +686,7 @@
       const rest=history.filter(x=>(String(x.subject||'').trim().toLocaleLowerCase('fi')||'(nimetön)')!==key);
       rest.unshift({id:stamp,time:stamp,signature,subject:draft.subject,bodyHtml:draft.bodyHtml,recipients:draft.recipients,recipientQuery:draft.recipientQuery||[]});
       localStorage.setItem(HISTORY_KEY,JSON.stringify(rest.slice(0,35)));
-      window.dispatchEvent(new Event('wilmatools:drafts-changed'));
+      window.dispatchEvent(new Event('openapuri:drafts-changed'));
     }
     // WMT/TXT v1: shareable templates only. No snapshots or draft history exported.
     function parseOpt(v){return v==='true'?true:v==='false'?false:null}
@@ -684,14 +694,14 @@
     const templateCats=t=>Array.isArray(t.categories)&&t.categories.length?t.categories:(t.category||'Yleinen').split(';').map(x=>x.trim()).filter(Boolean);
     function exportWmt(items){
       const clean=x=>String(x||'').replace(/\r/g,'').replace(/\n/g,' ');
-      return '# WilmaTools Templates v1\n\n'+items.map(t=>{
+      return '# OpenApuri Templates v1\n\n'+items.map(t=>{
         const fields=[['id',t.id||''],['nimi',t.title],['kategoria',templateCats(t).join('; ')],['vastaanottajat',t.recipientRule||'ei_valintaa'],['aihe',t.subject||''],['viestityyppi',t.messageMode||'group'],['ryhmat',(t.recipientGroups||[]).join('; ')],['henkilot',(t.recipientIndividuals||[]).join('; ')],['sisalto_html',t.bodyHtml?encodeURIComponent(t.bodyHtml):''],['nayta_vastaanottajien_nimet',t.options?.showRecipients===true?'true':t.options?.showRecipients===false?'false':''],['nayta_vastaukset',t.options?.collatedReplies===true?'true':t.options?.collatedReplies===false?'false':''],['tekstiviesti',t.options?.sms===true?'true':t.options?.sms===false?'false':''],['sahkoposti',t.options?.email===true?'true':t.options?.email===false?'false':''],['ajastus',t.options?.scheduled===true?'true':t.options?.scheduled===false?'false':''],['lahetyspaiva',t.options?.sendDate||''],['lahetysaika',t.options?.sendTime||'']];
         return '[POHJA]\n'+fields.map(([k,v])=>k+': '+clean(v)).join('\n')+'\n\n'+String(t.body||'').replace(/\r/g,'').replace(/^\[\/POHJA\]$/gm,'[ /POHJA ]')+'\n[/POHJA]';
       }).join('\n\n')+'\n';
     }
     function importWmt(content){
       const raw=String(content||'').replace(/\r\n?/g,'\n');
-      if(!raw.startsWith('# WilmaTools Templates v1'))throw Error('Tuntematon tiedostomuoto');
+      if(!raw.startsWith('# OpenApuri Templates v1'))throw Error('Tuntematon tiedostomuoto');
       const blocks=[...raw.matchAll(/^\[POHJA\]\n([\s\S]*?)^\[\/POHJA\]\s*$/gm)];
       if(!blocks.length)throw Error('Viestipohjia ei löytynyt');
       if(blocks.length>150)throw Error('Liian monta pohjaa');
@@ -709,7 +719,7 @@
     function exportFile(items){
       if(!items.length){alert('Valitse vähintään yksi viestipohja.');return}
       const blob=new Blob([exportWmt(items)],{type:'text/plain;charset=utf-8'});
-      const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=items.length===1?'wilmatools-'+String(items[0].id||items[0].title||'pohja').toLowerCase().replace(/[^a-z0-9äöå-]+/g,'-').slice(0,50)+'.wmt.txt':'wilmatools-viestipohjat.wmt.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
+      const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=items.length===1?'openapuri-'+String(items[0].id||items[0].title||'pohja').toLowerCase().replace(/[^a-z0-9äöå-]+/g,'-').slice(0,50)+'.wmt.txt':'openapuri-viestipohjat.wmt.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
     }
     function expandTemplate(source,values){
       return String(source||'').replace(/\{([a-z_]+(?::[a-z0-9_-]+)?)\}/gi,(match,key)=>{
@@ -848,9 +858,9 @@
           selectTemplateGroups(item).then(result=>{
             const missing=result.missing;
             // No separate confirmation gate: Wilma recipient controls remain the source of truth.
-            if(missing.length)console.warn('[WilmaTools] Ryhmän vastaanottajavalinta jäi kesken:',missing);
+            if(missing.length)console.warn('[OpenApuri] Ryhmän vastaanottajavalinta jäi kesken:',missing);
           }).catch(()=>alert('Tarkista ryhmä- ja henkilövastaanottajat Wilmassa.'));
-        }else if(item.recipients){restoreRecipients(item.recipients).catch(err=>console.warn('[WilmaTools] Pohjan vastaanottajat:',err))}
+        }else if(item.recipients){restoreRecipients(item.recipients).catch(err=>console.warn('[OpenApuri] Pohjan vastaanottajat:',err))}
       }catch(err){if(err.message!=='Käyttö peruttu')alert(err.message)}
     }
     const NATIVE_RECIPIENT_PARAMS=new Set(['r_student','r_teacher','r_personnel','r_guardian','r_class','r_classguardian']);
@@ -868,7 +878,7 @@
       // expose a reliable clear-all operation. Never leave prior draft recipients.
       const params=draftRecipientParams(draft);
       const target='/messages/compose'+([...params].length?'?'+params.toString():'');
-      localStorage.setItem('wilmatools.draftRestore.v1',JSON.stringify({
+      localStorage.setItem('openapuri.draftRestore.v1',JSON.stringify({
         subject:String(draft.subject||''),
         bodyHtml:String(draft.bodyHtml||draft.body||''),
         recipients:[...params].length?null:(draft.recipients||null),
@@ -897,11 +907,11 @@
           const wanted=[...params];
           if(JSON.stringify(currentValues.sort())===JSON.stringify(wanted.sort()))return;
           // Carry the content over the navigation so Wilma can add recipients natively.
-          localStorage.setItem('wilmatools.draftRestore.v1',JSON.stringify({subject:item.subject||'',bodyHtml:item.bodyHtml||item.body||'',createdAt:Date.now()}));
+          localStorage.setItem('openapuri.draftRestore.v1',JSON.stringify({subject:item.subject||'',bodyHtml:item.bodyHtml||item.body||'',createdAt:Date.now()}));
           location.assign('/messages/compose?'+params.toString());return;
         }
       }
-      if(item.recipients)restoreRecipients(item.recipients).catch(err=>console.warn('[WilmaTools] Vastaanottajien palautus:',err));
+      if(item.recipients)restoreRecipients(item.recipients).catch(err=>console.warn('[OpenApuri] Vastaanottajien palautus:',err));
     }
     function library(){
       const existing=document.getElementById('wt-message-library');if(existing){existing.hidden=false;existing.scrollIntoView({block:'nearest'});return}
@@ -922,7 +932,7 @@
         const duplicate=document.getElementById('wt-message-toolbar');if(duplicate)duplicate.remove();
       }else document.querySelector('main#main-content')?.prepend(aside);
       let tab=location.hash==='#wt-library'?'drafts':'templates',category='Kaikki',edit=-1,recipientStatus='',exportSelected=new Set(),pendingTemplate=null;
-      const navigation=document.createElement('nav');navigation.setAttribute('aria-label','WilmaTools');navigation.id='wt-library-tabs';
+      const navigation=document.createElement('nav');navigation.setAttribute('aria-label','OpenApuri');navigation.id='wt-library-tabs';
       for(const [key,name] of [['templates','Viestipohjat'],['drafts','Tallennetut luonnokset']]){
         const control=document.createElement('button');control.type='button';control.textContent=name;control.dataset.tab=key;
         control.onclick=()=>{tab=key;aside.hidden=false;draw()};
@@ -931,14 +941,14 @@
       navigation.style.cssText='display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #ccc;padding:0 0 8px;margin-bottom:8px';
       const refreshNavigation=()=>navigation.querySelectorAll('button').forEach(x=>{x.style.cssText='border:0;background:transparent;padding:6px;color:#245675;cursor:pointer;border-bottom:2px solid '+(x.dataset.tab===tab?'#27648b':'transparent')});
 
-      const sent=safeRead('wilmatools.sentTemplateImport.v1',null);
+      const sent=safeRead('openapuri.sentTemplateImport.v1',null);
       if(sent&&Number.isFinite(sent.createdAt)&&Date.now()-sent.createdAt<15*60*1000){
         pendingTemplate={title:String(sent.subject||'Vanhasta viestistä').slice(0,120),subject:String(sent.subject||''),body:String(sent.body||''),bodyHtml:String(sent.bodyHtml||''),category:'Yleinen',recipientRule:'ei_valintaa',messageMode:'group',recipients:null};
-        localStorage.removeItem('wilmatools.sentTemplateImport.v1');
+        localStorage.removeItem('openapuri.sentTemplateImport.v1');
         tab='templates';
       }
-      window.addEventListener('wilmatools:library-tab',event=>{tab=event.detail==='drafts'?'drafts':'templates';edit=-1;draw()});
-      window.addEventListener('wilmatools:compose-to-template',()=>{const current=collectDraft();pendingTemplate={title:String(current.subject||'Uusi viestipohja'),subject:current.subject||'',body:current.bodyHtml||current.body||'',category:'Yleinen',recipientRule:'ei_valintaa',messageMode:'group',recipients:null};edit=-1;tab='templates';aside.hidden=false;editor()});
+      window.addEventListener('openapuri:library-tab',event=>{tab=event.detail==='drafts'?'drafts':'templates';edit=-1;draw()});
+      window.addEventListener('openapuri:compose-to-template',()=>{const current=collectDraft();pendingTemplate={title:String(current.subject||'Uusi viestipohja'),subject:current.subject||'',body:current.bodyHtml||current.body||'',category:'Yleinen',recipientRule:'ei_valintaa',messageMode:'group',recipients:null};edit=-1;tab='templates';aside.hidden=false;editor()});
       const b=(name,fn)=>{const x=document.createElement('button');x.type='button';x.textContent=name;x.onclick=fn;x.style.cssText='border:1px solid #b9cbd9;background:#eff6fb;border-radius:6px;padding:7px;margin:4px;color:#234968;cursor:pointer;font:inherit';return x};
       const label=(tag,text)=>{const e=document.createElement(tag);e.textContent=text;return e};
       function draw(){
@@ -1005,8 +1015,8 @@
         };manage.append(upload);
         data.forEach((item,i)=>{if(category!=='Kaikki'&&!templateCats(item).includes(category))return;const row=label('div','');row.style.cssText='border-bottom:1px solid #ddd;padding:10px 0';row.append(label('strong',item.title),label('div',templateCats(item).join(', ')));const tick=document.createElement('input');tick.type='checkbox';tick.checked=exportSelected.has(i);tick.onchange=()=>{if(tick.checked)exportSelected.add(i);else exportSelected.delete(i);draw()};row.prepend(tick);row.append(b('Käytä',()=>useTemplate(item)),b('Vie .txt',()=>exportFile([item])),b('Muokkaa',()=>{edit=i;editor()}),b('Poista',()=>{if(confirm('Poistetaanko pohja?')){data.splice(i,1);exportSelected.clear();localStorage.setItem(TEMPLATE_KEY,JSON.stringify(data));draw()}}));manage.append(row)});
        }
-       const names=safeReadSession('wilmatools.recipientReminder.v1',[]);
-       if(names.length){const note=label('div','Valitse Wilmassa vastaanottajat: '+names.join(', '));note.style.cssText='padding:9px;background:#fff6da;border:1px solid #e3cd91;border-radius:6px';aside.append(note);aside.append(b('Vastaanottajat tarkistettu',()=>{sessionStorage.removeItem('wilmatools.recipientReminder.v1');draw()}))}
+       const names=safeReadSession('openapuri.recipientReminder.v1',[]);
+       if(names.length){const note=label('div','Valitse Wilmassa vastaanottajat: '+names.join(', '));note.style.cssText='padding:9px;background:#fff6da;border:1px solid #e3cd91;border-radius:6px';aside.append(note);aside.append(b('Vastaanottajat tarkistettu',()=>{sessionStorage.removeItem('openapuri.recipientReminder.v1');draw()}))}
        if(recipientStatus){const receipt=label('p',recipientStatus);receipt.style.cssText='padding:8px;background:#fff7e5;border-radius:5px;color:#69501e';aside.append(receipt)}
        const hint=label('p','Tallenteet säilyvät vain tässä selaimessa.');hint.style.color='#687987';aside.append(hint)
       }
@@ -1040,7 +1050,7 @@
        aside.append(b('Tallenna',()=>{const all=getTemplates();const next={id:item.id||'',title:fields.title.value.trim(),category:(fields.category.value.split(';')[0]||'Yleinen').trim(),categories:fields.category.value.split(';').map(x=>x.trim()).filter(Boolean),bodyHtml:sanitizeTemplateHtml(rich.innerHTML),subject:fields.subject.value,body:rich.innerText||rich.textContent||'',options:{showRecipients:parseOpt(optionControls.showRecipients.value),collatedReplies:parseOpt(optionControls.collatedReplies.value),sms:parseOpt(optionControls.sms.value),email:parseOpt(optionControls.email.value),scheduled:parseOpt(optionControls.scheduled.value),sendDate:optionControls.sendDate.value.trim(),sendTime:optionControls.sendTime.value.trim()},recipientRule:choice.value,messageMode:mode.value,recipientGroups:recipientFields.recipientGroups.value.split('\n').map(x=>x.trim()).filter(Boolean),recipientIndividuals:recipientFields.recipientIndividuals.value.split('\n').map(x=>x.trim()).filter(Boolean),recipients:chk.checked?(edit>=0&&item.recipients?item.recipients:getRecipientsSnapshot()):null};if(!next.title)return;if(edit<0)all.push(next);else all[edit]=next;pendingTemplate=null;localStorage.setItem(TEMPLATE_KEY,JSON.stringify(all));draw()}),b('Takaisin',draw));
       }
       if(pendingTemplate)editor();else draw();
-      window.addEventListener('wilmatools:drafts-changed',()=>{if(!aside.hidden&&tab==='drafts')draw()});
+      window.addEventListener('openapuri:drafts-changed',()=>{if(!aside.hidden&&tab==='drafts')draw()});
 
     }
     function addLibraryEntry(){
@@ -1048,14 +1058,14 @@
       // The unified Viestikirjasto is already visible beside the editor.
       document.getElementById('wt-library-entry')?.remove();
       library();
-      const savedRestore=safeRead('wilmatools.draftRestore.v1',null);
+      const savedRestore=safeRead('openapuri.draftRestore.v1',null);
       if(savedRestore&&Date.now()-savedRestore.createdAt<120000){
-        localStorage.removeItem('wilmatools.draftRestore.v1');
+        localStorage.removeItem('openapuri.draftRestore.v1');
         applySaved(savedRestore,false);
         // Native URL parameters are preferred. Historical snapshots are
         // restored only on a freshly cleared compose page.
         if(savedRestore.replaceRecipients&&savedRestore.recipients){
-          restoreRecipients(savedRestore.recipients).catch(e=>console.warn('[WilmaTools] Draft recipients:',e));
+          restoreRecipients(savedRestore.recipients).catch(e=>console.warn('[OpenApuri] Draft recipients:',e));
         }
       }
       const request=safeRead(REQUEST_KEY,null);
@@ -1082,7 +1092,7 @@
               warning.style.cssText='padding:8px;color:#9a4e13';
               ($(SEL.recipientsCell)?.parentElement||document.body).prepend(warning);
             }
-          }).catch(e=>console.warn('[WilmaTools] Snapshot recipient restore failed:',e));
+          }).catch(e=>console.warn('[OpenApuri] Snapshot recipient restore failed:',e));
         }
         if(Array.isArray(request.missingRecipients)&&request.missingRecipients.length){
           const note=document.createElement('aside');
@@ -1107,11 +1117,11 @@
             library();const pane=document.getElementById('wt-message-library');
             if(pane){const note=document.createElement('p');note.textContent='Valintaa ei voitu vahvistaa: '+result.missing.join(', ')+'. Tarkista vastaanottajat Wilmassa.';pane.prepend(note)}
           }
-        }).catch(err=>console.warn('[WilmaTools] Recipient selection failed:',err));
+        }).catch(err=>console.warn('[OpenApuri] Recipient selection failed:',err));
       }
-      window.addEventListener('wilmatools:show-library',event=>{if(event.detail?.section==='message'){const lib=document.getElementById('wt-message-library');if(lib){lib.hidden=false;const sections=[...lib.children].filter(el=>el.id!=='wt-message-toolbar');sections.forEach(el=>el.hidden=true)}return}library();window.dispatchEvent(new CustomEvent('wilmatools:library-tab',{detail:event.detail?.section}))});
-      window.addEventListener('wilmatools:save-compose-template',()=>{library();window.dispatchEvent(new Event('wilmatools:compose-to-template'))});
-      window.addEventListener('wilmatools:open-library',()=>{const lib=document.getElementById('wt-message-library');if(lib)lib.hidden=false;else library()});
+      window.addEventListener('openapuri:show-library',event=>{if(event.detail?.section==='message'){const lib=document.getElementById('wt-message-library');if(lib){lib.hidden=false;const sections=[...lib.children].filter(el=>el.id!=='wt-message-toolbar');sections.forEach(el=>el.hidden=true)}return}library();window.dispatchEvent(new CustomEvent('openapuri:library-tab',{detail:event.detail?.section}))});
+      window.addEventListener('openapuri:save-compose-template',()=>{library();window.dispatchEvent(new Event('openapuri:compose-to-template'))});
+      window.addEventListener('openapuri:open-library',()=>{const lib=document.getElementById('wt-message-library');if(lib)lib.hidden=false;else library()});
     }
     function saveDraft(reason) {
         if(setBodyHtml.pending)return;
@@ -1377,6 +1387,6 @@
     }
 
     // The desktop toolbar can reopen the local controls without changing save/restore logic.
-    window.addEventListener('wilmatools:open-autosaver', () => {const lib=document.getElementById('wt-message-library');if(lib)lib.hidden=false;else library()});
+    window.addEventListener('openapuri:open-autosaver', () => {const lib=document.getElementById('wt-message-library');if(lib)lib.hidden=false;else library()});
     ready(init);
 })();
