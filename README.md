@@ -10,8 +10,8 @@ Asenna Tampermonkey ja haluamasi skriptit. Tietokoneella sivupaneeli ja varsinai
 
 | Työkalu | Versio | Asennus |
 | --- | --- | --- |
-| OpenApuri-sivupaneeli (tietokone) | 0.23.0 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js) |
-| Ryhmänohjaajan opintoseuranta | 0.23.0 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuri.user.js) |
+| OpenApuri-sivupaneeli (tietokone) | 0.23.2 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js) |
+| Ryhmänohjaajan opintoseuranta | 0.23.2 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuri.user.js) |
 | OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.6.10 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/OpiskelijaHaku.user.js) |
 | Viestiluonnosten tallennus – Chrome tietokoneella | 0.16.18 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/message-autosaver-chrome-desktop.user.js) |
 | Viestiluonnosten tallennus – Firefox Androidissa (kokeellinen) | 0.6.2 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/message-autosaver-firefox-android.user.js) |
@@ -87,17 +87,17 @@ Lähdekoodi: https://github.com/ljrant/OpenApuri
 
 **Huomautus:** Kaikkia toimintoja ei ole vielä vahvistettu eri koulujen Wilma-käyttöliittymissä. Testaa etenkin ryhmäsivun linkit, opiskelijamäärä ja vastaanottajavalinta ennen varsinaista käyttöä.
 
-## Arviointinäkymän integrointi (v0.23.0)
+## Arviointinäkymän integrointi (v0.23.2)
 
 Ryhmäsivulle lisätään **Arviointinäkymä** Wilman omaan välilehtiriviin mahdollisuuksien mukaan **Tuen tilastot** -välilehden jälkeen. Arviointitaulukko näkyy samalla sivulla; muihin välilehtiin siirtyminen palauttaa Wilman alkuperäisen sisällön. Sivupaneelista poistettiin erillinen arviointipikavalinta. Opiskelijoiden suoritussivujen haussa ei ole keinotekoista odotusta: käytössä on enintään viisi rinnakkaista pyyntöä. Käyttöliittymäintegraatio on testattava koulun Wilma-versiossa.
 
 Arviointinäkymän versiossa **0.18.3** näkymä korvaa ryhmäsivun välilehtialueen muun sisällön sen sijaan, että se lisättäisiin sivun loppuun. Wilman alkuperäinen välilehtisisältö palautetaan muihin välilehtiin siirryttäessä. Käyttöliittymää on testattava oikeassa Wilma-ympäristössä.
 
-**v0.23.0:** Arviointinäkymä-välilehti lisätään myös ryhmän alisivuille, jos niillä näkyy sama Wilman välilehtipalkki. Alisivun välilehtilinkki avaa saman ryhmän pääsivun arviointinäkymän automaattisesti.
+**v0.23.2:** Arviointinäkymä-välilehti lisätään myös ryhmän alisivuille, jos niillä näkyy sama Wilman välilehtipalkki. Alisivun välilehtilinkki avaa saman ryhmän pääsivun arviointinäkymän automaattisesti.
 
-**v0.23.0:** Opiskelijoiden suoritukset ladataan taustalla enintään viidellä rinnakkaisella pyynnöllä. Arviointimatriisi näytetään yhdellä kertaa valmistumisen jälkeen. Erillisiä keräys-, pysäytys- ja päivityspainikkeita tai lataus- ja virhelaskureita ei näytetä. Puuttuvia tietoja ei kuitenkaan korvata oletusarvoilla.
+**v0.23.2:** Opiskelijoiden suoritukset ladataan taustalla enintään viidellä rinnakkaisella pyynnöllä. Arviointimatriisi näytetään yhdellä kertaa valmistumisen jälkeen. Erillisiä keräys-, pysäytys- ja päivityspainikkeita tai lataus- ja virhelaskureita ei näytetä. Puuttuvia tietoja ei kuitenkaan korvata oletusarvoilla.
 
-**v0.23.0:** Ryhmäsivun välilehtirivillä ovat erilliset **Arviointinäkymä** ja **Huomiot**. Arviointinäkymän sisäiset päällekkäiset navigointi- ja keräyspainikkeet on poistettu. Matriisin **Opiskelija**-otsaketta painamalla voi järjestää opiskelijat aakkosittain nousevaan tai laskevaan järjestykseen. Lukuvuosi- ja muut suodattimet sekä CSV-vienti säilyvät.
+**v0.23.2:** Ryhmäsivun välilehtirivillä ovat erilliset **Arviointinäkymä** ja **Huomiot**. Arviointinäkymän sisäiset päällekkäiset navigointi- ja keräyspainikkeet on poistettu. Matriisin **Opiskelija**-otsaketta painamalla voi järjestää opiskelijat aakkosittain nousevaan tai laskevaan järjestykseen. Lukuvuosi- ja muut suodattimet sekä CSV-vienti säilyvät.
 
 **Sivupaneeli v0.17.2:** OpenApuri-valikon avauspainike sijoitetaan Wilman tummansinisen otsakealueen oikeaan reunaan, mahdollisuuksien mukaan käyttäjä- ja koulutietojen sekä **Lähetä tapahtumakutsuja** -linkin alapuolelle. Painike pysyy paikallaan sivua vieritettäessä. Varsinainen työkalupaneeli avautuu edelleen painikkeesta.
 
@@ -123,29 +123,29 @@ Viestipohjan vastaanottajatavaksi voi valita **Ryhmiä ja yksittäisiä henkilö
 
 **Sivupaneeli v0.18.1:** Etusivun Viesti opiskelijoille / huoltajille / molemmille -toiminto hyväksyy vain yksiselitteisen ryhmäkohtaisen Wilman viestilinkin. Opiskelijarivin yksittäisen henkilön viestilinkkiä ei enää käytetä ryhmän sijasta. Ellei oikeaa ryhmälinkkiä löydy, toiminto näyttää ilmoituksen eikä avaa väärille vastaanottajille osoitettua viestiä. Ryhmäkohtaisten vastaanottajalinkkien tunnistus vaatii Wilman oikean HTML-rakenteen varmistamisen.
 
-**Vastaanottajavalinta (sivupaneeli v0.23.0, viestimoottori v0.16.18):** Wilman luokan vastaanottajapaneelista tunnistettiin opiskelija- ja huoltajaryhmien `button.recipient-block`-elementit. Etusivun ryhmäkohtaiset opiskelijoille, huoltajille ja molemmille tarkoitetut viestitoiminnot siirtävät luokan tunnisteen viestimoottorille, joka avaa vastaavan paneelin ja käyttää Wilman omia painikkeita. Valmiiksi aktiivisia (`aria-pressed=true`) vastaanottajia ei napsauteta toistamiseen. Yhdistelmäviestipohjissa luokan ryhmävalinta käyttää samaa mekanismia, mutta yksittäisten opettajien nimihaku on vielä kokeellinen. Vastaanottajavalinnat tulee vahvistaa Wilmassa ennen viestin lähettämistä.
+**Vastaanottajavalinta (sivupaneeli v0.23.2, viestimoottori v0.16.18):** Wilman luokan vastaanottajapaneelista tunnistettiin opiskelija- ja huoltajaryhmien `button.recipient-block`-elementit. Etusivun ryhmäkohtaiset opiskelijoille, huoltajille ja molemmille tarkoitetut viestitoiminnot siirtävät luokan tunnisteen viestimoottorille, joka avaa vastaavan paneelin ja käyttää Wilman omia painikkeita. Valmiiksi aktiivisia (`aria-pressed=true`) vastaanottajia ei napsauteta toistamiseen. Yhdistelmäviestipohjissa luokan ryhmävalinta käyttää samaa mekanismia, mutta yksittäisten opettajien nimihaku on vielä kokeellinen. Vastaanottajavalinnat tulee vahvistaa Wilmassa ennen viestin lähettämistä.
 
 ### Viestipohjan lisäasetukset ja ajastus (v0.16.18)
 
 Viestipohjan muokkausnäkymässä voi määrittää Wilman valinnat **vastaanottajat näkevät toistensa nimet**, **vastaanottajat näkevät toistensa vastaukset**, **lähetä myös tekstiviestinä**, **lähetä myös sähköpostina** ja **ajasta lähetys**. Jokaisella on vaihtoehdot *Säilytä Wilman oletus*, *Kyllä* ja *Ei*. Ajastukseen voi antaa lisäksi päivän ja ajan Wilman kenttien hyväksymässä muodossa. Tekstiformaatissa vastaavat kentät ovat `nayta_vastaanottajien_nimet`, `nayta_vastaukset`, `tekstiviesti`, `sahkoposti`, `ajastus`, `lahetyspaiva` ja `lahetysaika`. Tyhjä arvo jättää Wilman oletuksen ennalleen, `true` valitsee ja `false` poistaa valinnan. Käyttöliittymässä pois käytöstä olevaan kenttään ei kosketa. Ajastuksen oikeellisuus ja mahdolliset sähköposti-/tekstiviestipalvelun asetukset tulee tarkistaa Wilmassa ennen lähetystä.
 
-## Käyttöliittymän sijoittelu (sivupaneeli v0.23.0, viestikirjasto v0.16.18)
+## Käyttöliittymän sijoittelu (sivupaneeli v0.23.2, viestikirjasto v0.16.18)
 
 Aiempi koko sivun päälle avautuva OpenApuri-sivupaneeli on korvattu matalalla, vaakasuuntaisella alareunan työkalurivillä. Riviltä pääsee viestin kirjoittamiseen, viestipohjiin ja luonnoksiin. Wilman viestin kirjoitussivulla **Viestikirjasto** sijaitsee nyt varsinaisessa sivusisällössä kirjoituslomakkeen yhteydessä, ei kiinteänä oikean reunan peittävänä paneelina. Kirjaston luonnokset ja viestipohjat sekä niiden tuonti, vienti ja muokkaus ovat muuten edelleen käytettävissä. Sijoittelu tulee tarkistaa Wilman omassa sivuasettelussa.
 
-## Lähetetystä viestistä viestipohjaksi (v0.23.0 + v0.16.18)
+## Lähetetystä viestistä viestipohjaksi (v0.23.2 + v0.16.18)
 
 Wilman avatun viestin sivulle lisätään **Tallenna viestipohjaksi** -painike, kun viestin sisältö löytyy sivun `iframe#message-wrapper`-kehyksen `div.ckeditor`-elementistä. Painike siirtää luettavan viestitekstin ja sivun otsikosta päätellyn aiheen Wilman kirjoitussivun Viestikirjaston muokkausnäkymään. Varmista aihe, tarkista ja poista mahdolliset henkilötiedot, määritä kategoria ja muuttujat sekä tallenna pohja itse. Alkuperäisiä vastaanottajia ei tuoda pohjaan. Alkuperäisen viestin tekstimuotoilut eivät välttämättä säily, sillä kopioidaan viestin luettava teksti. Käyttö vaatii sekä työkalurivimoduulin että Chrome-viestikirjaston asennuksen.
 
-### Viestin toimintovalikon OpenApuri-painike (v0.23.0)
+### Viestin toimintovalikon OpenApuri-painike (v0.23.2)
 
 Avatun Wilma-viestin näkymässä OpenApuriin toiminnot ovat omassa pienessä **OpenApuri ▾** -pudotusvalikossa viestin toimintopainikkeiden vieressä silloin, kun Wilman oma toimintovalikko löytyy. Valikko sisältää **Tallenna viestipohjaksi**, **Viestipohjat**, **Luonnokset** ja **Viestikirjasto**. Jos Wilman toimintopainikkeita ei tunnisteta, painike näytetään viestikehyksen yläpuolella. Wilman omia toimintovalintoja ei muuteta. Erillinen suuri kelluva sivupaneeli ei palaudu.
 
-## Yhteinen viestisivujen OpenApuri-rivi (v0.23.0 + v0.16.18)
+## Yhteinen viestisivujen OpenApuri-rivi (v0.23.2 + v0.16.18)
 
 DOM-raporttien perusteella sekä viestin kirjoitusnäkymässä että yksittäisen viestin näkymässä on `main#main-content`. Molemmissa näkyy nyt sama huomaamaton OpenApuri-työkalurivi tämän elementin alussa. Aiempi erillinen viestikohtainen pudotusvalikko ja näiden sivujen alareunan yleisrivi poistuvat näkyvistä. Kirjoitusnäkymän **Viestipohjat**, **Luonnokset** ja **Tallenna nykyinen pohjaksi** käyttävät upotettua kirjastoa. Yksittäisen viestin näkymässä **Tallenna viestipohjaksi** poimii viestikehyksen tekstin ja avaa muokattavan pohjan kirjoitussivulla; muut kirjastolinkit vievät samaan kirjoitussivun kirjastoon. Lähetystä ei automatisoida. Lopullinen sijoittelu tulee testata Wilman oikeassa käyttöliittymässä.
 
-## Viestikirjasto ja vastaanottajaluonnokset (v0.23.0 + v0.16.18)
+## Viestikirjasto ja vastaanottajaluonnokset (v0.23.2 + v0.16.18)
 
 - Etusivun ryhmäviestien opiskelija-/huoltajavastaanottajat avataan Wilman alkuperäisillä `r_class`- ja `r_classguardian`-parametreilla.
 - Luonnoksessa tallennetaan luokan URL-pohjainen vastaanottajavalinta, jos se on saatavilla, ja palautuksessa avataan Wilman oma vastaanottajilla esitäytetty kirjoitusosoite. Henkilökohtaiset vastaanottajat voivat edelleen vaatia käsin tarkistamista.
@@ -178,7 +178,7 @@ Wilman kirjoituslomake ja Viestikirjasto sijoitetaan vierekkäisiin sarakkeisiin
 
 Rinnakkaisen asettelun aiemmassa toteutuksessa Wilman viestilomake siirrettiin toiseen DOM-säiliöön. Tämä saattoi irrottaa CKEditorin iframe-dokumentin ja aiheuttaa `getSelection`-virheen sekä estää palautettujen viestien muokkaamisen tai tallentamisen. Uusi asettelu käyttää alkuperäisen lomakkeen vanhempielementin CSS-ruudukkoa eikä siirrä viestilomaketta tai editoria DOM-puussa. Päivityksen jälkeen sivu on ladattava uudelleen, jotta jo rikkoutunut editori alustuu uudelleen.
 
-### Yksi viestityökalujen valikko (Toolbar v0.23.0, Viestikirjasto v0.16.1)
+### Yksi viestityökalujen valikko (Toolbar v0.23.2, Viestikirjasto v0.16.1)
 
 Wilman viestin kirjoitussivulla yläreunan erillinen OpenApuri-välilehtirivi on poistettu. Oikeanpuoleisessa Viestikirjastossa on yksi yhtenäinen **Viesti / Viestipohjat / Luonnokset** -välilehtivalikko. Viestipohjien haku, luokittelu, luonnosvalinta ja hallinta toimivat saman näkymän sisällä. Näin päällekkäiset yläpalkit ja kirjaston erilliset valikkopainikkeet poistuvat. Wilman alkuperäistä viestilomaketta ei siirretä DOM-puussa, jotta CKEditor säilyy ehjänä. Avatun vanhan viestin omat työkalut säilyvät yksittäisen viestin sivulla.
 
@@ -230,4 +230,9 @@ Diagnostiikka vahvisti, että ryhmien URL-rakenne on `/profiles/classes/:id` eik
 
 ## OpenApurin sisäinen asetukset-valikko
 
-OpenApurin työkalupalkin versiosta 0.23.0 alkaen Wilman logon vieressä näkyy GitHubin `OpenApuriLogo.svg`-tiedostoa käyttävä asetuspainike. Kuvakkeen napsauttaminen avaa suoraan Wilman päälle sisäisen asetukset-valikon, jossa on erilliset näkymät yleisille asetuksille, opintoseurannalle, OpiskelijaHaulle, Chrome- ja Android-viestiluonnoksille sekä työkalupalkille. Erillistä HTML-asetussivua tai GitHub Pages -asetussivustoa **ei** luoda. Asetukset tallentuvat Wilman localStorageen avaimiin `openapuri.settings` ja `openapuri.modules.v1`. Aiemmat `wilmatools.*`-avaimet luetaan kerran yhteensopivuussyistä ja tiedot kopioidaan uuteen nimiavaruuteen, jos uutta tietoa ei vielä ole. Tampermonkeyssa käytöstä poistettu skripti ei voi käynnistyä asetuspainikkeen perusteella; moduulien asetukset vaikuttavat asennettuihin skripteihin seuraavan sivunlatauksen yhteydessä. Abitti-käyttöliittymän integrointi edellyttää sen osoitteen ja logorakenteen varmistamista.
+OpenApurin työkalupalkin versiosta 0.23.2 alkaen Wilman logon vieressä näkyy GitHubin `OpenApuriLogo.svg`-tiedostoa käyttävä asetuspainike. Kuvakkeen napsauttaminen avaa suoraan Wilman päälle sisäisen asetukset-valikon, jossa on erilliset näkymät yleisille asetuksille, opintoseurannalle, OpiskelijaHaulle, Chrome- ja Android-viestiluonnoksille sekä työkalupalkille. Erillistä HTML-asetussivua tai GitHub Pages -asetussivustoa **ei** luoda. Asetukset tallentuvat Wilman localStorageen avaimiin `openapuri.settings` ja `openapuri.modules.v1`. Aiemmat `wilmatools.*`-avaimet luetaan kerran yhteensopivuussyistä ja tiedot kopioidaan uuteen nimiavaruuteen, jos uutta tietoa ei vielä ole. Tampermonkeyssa käytöstä poistettu skripti ei voi käynnistyä asetuspainikkeen perusteella; moduulien asetukset vaikuttavat asennettuihin skripteihin seuraavan sivunlatauksen yhteydessä. Abitti-käyttöliittymän integrointi edellyttää sen osoitteen ja logorakenteen varmistamista.
+
+
+### OpenApuri v0.23.2: avaa moduulit suoraan asetuksista
+
+Asetusikkunan OpiskelijaHaku-näkymässä on `Avaa OpiskelijaHaku Wilmassa` -painike, joka vie nykyisen välilehden osoitteeseen `/profiles/students/#opiskelijahaku`. Jos moduuli oli pois käytöstä vain OpenApurin omassa asetustallennuksessa, se aktivoidaan samalla. Myös alapalkkiin lisättiin OpiskelijaHaku-pikatoiminto. Moduulin käyttöönottokytkin ei asenna skriptiä eikä voi käynnistää Tampermonkeyn kokonaan pois kytkemää skriptiä. Työkalupalkin päivitysosoitteet käyttävät nyt `ljrant/OpenApuri`-repon polkua.
