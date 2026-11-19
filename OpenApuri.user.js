@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.15
+// @version      1.0.16
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -2377,6 +2377,24 @@ const oaGlobal=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')||{}}c
 const oaElement=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e};
 const oaStyle=document.createElement('style');
 oaStyle.textContent=`
+/* OpenApuri design tokens: edit these values to retheme all OA UI.
+   Use var(--oa-*) in existing and future OpenApuri cards, tabs and toolbars. */
+:root{
+ --oa-navy:#13475e;--oa-teal:#135f67;--oa-primary:#147c6e;
+ --oa-primary-dark:#075b50;--oa-mint:#53d3bd;
+ --oa-surface:#f5fbf8;--oa-surface-accent:#e0f5eb;
+ --oa-border:#9cd7c5;--oa-text:#173c48;--oa-muted:#52716c;
+}
+#wt-message-toolbar,#wt-message-library{color:var(--oa-text)!important;background:var(--oa-surface)!important;border-color:var(--oa-border)!important}
+#wt-message-toolbar{position:relative!important;padding-right:70px!important;border-left:4px solid var(--oa-primary)!important;border-radius:6px!important}
+#wt-message-toolbar [role="tab"],#wt-library-tabs button{color:var(--oa-primary-dark)!important}
+#wt-message-toolbar [aria-selected="true"],#wt-library-tabs button[aria-selected="true"]{border-bottom-color:var(--oa-primary)!important;font-weight:700!important}
+#wt-message-library{border-left:4px solid var(--oa-primary)!important}
+#wt-message-library input,#wt-message-library select,#wt-message-library textarea{border-color:var(--oa-border)!important}
+#wt-message-library button:not(.oa-peeker-settings){accent-color:var(--oa-primary)}
+#wt-message-toolbar>.oa-message-peeker,#wt-message-library>.oa-message-peeker{position:absolute!important;display:flex!important;align-items:center!important;justify-content:center!important;right:14px!important;top:-20px!important;width:44px!important;height:46px!important;border:0!important;background:transparent!important;padding:0!important;cursor:pointer!important;z-index:40!important}
+#wt-message-toolbar>.oa-message-peeker img,#wt-message-library>.oa-message-peeker img{display:block!important;width:44px!important;height:46px!important;object-fit:contain!important;pointer-events:none!important}
+#wt-message-toolbar>.oa-message-peeker:focus-visible,#wt-message-library>.oa-message-peeker:focus-visible{outline:2px solid var(--oa-primary)!important;outline-offset:2px!important}
 #oa-dialog[hidden]{display:none!important}
 #oa-dialog{position:fixed;inset:0;z-index:2147483600;color:#243a4b;font:14px system-ui,sans-serif}
 #oa-dialog .oa-shade{position:absolute;inset:0;background:#12263899}
@@ -2822,6 +2840,16 @@ function swapTwoHomepageBoxes(){
 
 
 
+function oaMessagePeeker(host){
+ if(!host||host.querySelector(':scope > .oa-message-peeker'))return;
+ host.style.position='relative';
+ const button=document.createElement('button');button.type='button';button.className='oa-message-peeker';
+ button.title='OpenApuri · Viestiasetukset';button.setAttribute('aria-label','Avaa viestityökalujen asetukset');
+ const img=document.createElement('img');img.src='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriPeeker.png';img.alt='';
+ button.append(img);
+ button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'draftsChrome'}}))});
+ host.prepend(button);
+}
 function installUnifiedMessageBar(){
  if(!/^\/messages\/(?:compose(?:\/)?|\d+\/?)$/.test(location.pathname))return;
  const main=document.querySelector('main#main-content');
@@ -2830,14 +2858,15 @@ function installUnifiedMessageBar(){
  const compose=/^\/messages\/compose\/?$/.test(location.pathname);
  const bar=document.createElement('section');bar.id='wt-message-toolbar';
  bar.setAttribute('aria-label','OpenApuri viestityökalut');
- bar.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:7px 9px;margin:0 0 12px;background:#f6f8fa;border:1px solid #d8e1e8;border-radius:5px;font:12px system-ui;color:#29465c;max-width:100%;box-sizing:border-box;';
+ oaMessagePeeker(bar);
+ bar.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:7px 9px;margin:0 0 12px;background:var(--oa-surface);border:1px solid var(--oa-border);border-radius:5px;font:12px system-ui;color:#29465c;max-width:100%;box-sizing:border-box;';
  const brand=document.createElement('strong');brand.textContent='OpenApuri';brand.style.cssText='font-size:12px;margin-right:6px';bar.append(brand);
- const button=(name,action)=>{const b=document.createElement('button');b.type='button';b.textContent=name;b.setAttribute('role','tab');b.setAttribute('aria-selected','false');b.style.cssText='background:transparent;color:#2a5676;border:0;border-bottom:2px solid transparent;padding:7px 11px;cursor:pointer;font:13px system-ui';b.addEventListener('click',action);bar.append(b);return b};
+ const button=(name,action)=>{const b=document.createElement('button');b.type='button';b.textContent=name;b.setAttribute('role','tab');b.setAttribute('aria-selected','false');b.style.cssText='background:transparent;color:var(--oa-primary-dark);border:0;border-bottom:2px solid transparent;padding:7px 11px;cursor:pointer;font:13px system-ui';b.addEventListener('click',action);bar.append(b);return b};
  bar.setAttribute('role','tablist');
  const activate=(name)=>{
   for(const b of bar.querySelectorAll('[role="tab"]')){
    const active=b.dataset.tab===name;b.setAttribute('aria-selected',String(active));
-   b.style.borderBottomColor=active?'#27648b':'transparent';
+   b.style.borderBottomColor=active?'var(--oa-primary)':'transparent';
    b.style.fontWeight=active?'600':'400';
   }
   if(compose)window.dispatchEvent(new CustomEvent('openapuri:show-library',{detail:{section:name}}));
@@ -2856,8 +2885,8 @@ function installUnifiedMessageBar(){
   });save.setAttribute('role','button')}
  else{const save=button('Tallenna nykyinen pohjaksi',()=>{activate('templates');window.dispatchEvent(new CustomEvent('openapuri:save-compose-template'))});save.setAttribute('role','button')}
  const active=compose?(location.hash==='#wt-library'?'drafts':location.hash==='#wt-library-templates'?'templates':'message'):'message';
- for(const b of bar.querySelectorAll('[role="tab"]')){const yes=b.dataset.tab===active;b.setAttribute('aria-selected',String(yes));b.style.borderBottomColor=yes?'#27648b':'transparent'}
- window.addEventListener('openapuri:library-closed',()=>{for(const b of bar.querySelectorAll('[role="tab"]')){const yes=b.dataset.tab==='message';b.setAttribute('aria-selected',String(yes));b.style.borderBottomColor=yes?'#27648b':'transparent'}});
+ for(const b of bar.querySelectorAll('[role="tab"]')){const yes=b.dataset.tab===active;b.setAttribute('aria-selected',String(yes));b.style.borderBottomColor=yes?'var(--oa-primary)':'transparent'}
+ window.addEventListener('openapuri:library-closed',()=>{for(const b of bar.querySelectorAll('[role="tab"]')){const yes=b.dataset.tab==='message';b.setAttribute('aria-selected',String(yes));b.style.borderBottomColor=yes?'var(--oa-primary)':'transparent'}});
  main.insertAdjacentElement('afterbegin',bar);
 }
 if(/^\/messages\//.test(location.pathname)){
