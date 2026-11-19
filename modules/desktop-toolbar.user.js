@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.11
+// @version      0.24.12
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -100,13 +100,13 @@ oaStyle.textContent=`
 ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a{color:#096b5c!important;font-weight:600!important}
 ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a:hover{color:#075b50!important}
 ul.nav-tabs.nav-tabs-primary>li.oa-added-tab.active>a{color:#096b5c!important}
-/* Peeking monkey is a separate settings button, not nested inside a tab link. */
-ul.nav-tabs.nav-tabs-primary>li.oa-added-tab{position:relative!important;overflow:visible!important}
-ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a{padding-right:33px!important}
-ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>.oa-peeker-settings{position:absolute!important;display:flex!important;align-items:center!important;justify-content:center!important;top:-20px!important;right:11px!important;width:38px!important;height:37px!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;z-index:30!important;overflow:visible!important}
-ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>.oa-peeker-settings img{display:block!important;width:38px!important;height:38px!important;object-fit:contain!important;pointer-events:none!important}
-ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>.oa-peeker-settings:hover{transform:translateY(-3px)!important}
-ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>.oa-peeker-settings:focus-visible{outline:2px solid #167b69!important;outline-offset:1px!important}
+/* The monkey peeks from the lower edge of the active OpenApuri content header.
+   Never put it in a tab, so inactive tabs cannot display monkeys. */
+#oh-panel>h2,#wt-panel>#wt-header{position:relative!important;overflow:visible!important}
+#oh-panel>h2>.oa-peeker-settings,#wt-header>.oa-peeker-settings{position:absolute!important;right:18px!important;bottom:-6px!important;top:auto!important;display:flex!important;align-items:center!important;justify-content:center!important;width:45px!important;height:46px!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;z-index:40!important}
+#oh-panel>h2>.oa-peeker-settings img,#wt-header>.oa-peeker-settings img{display:block!important;width:45px!important;height:46px!important;object-fit:contain!important;pointer-events:none!important}
+#oh-panel>h2>.oa-peeker-settings:hover,#wt-header>.oa-peeker-settings:hover{transform:translateY(-2px)!important}
+#oh-panel>h2>.oa-peeker-settings:focus-visible,#wt-header>.oa-peeker-settings:focus-visible{outline:2px solid #087266!important;outline-offset:1px!important}
 #wt-panel{border:2px solid #238d83!important}
 #wt-header{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
 #oh-panel .oh-recipient-panel{background:#eaf8f2!important;border:1px solid #7bbdaa!important}
