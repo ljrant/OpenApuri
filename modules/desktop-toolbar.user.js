@@ -63,6 +63,12 @@ oaStyle.textContent=`
  --oa-surface:#f5fbf8;--oa-surface-accent:#e0f5eb;
  --oa-border:#9cd7c5;--oa-text:#173c48;--oa-muted:#52716c;
 }
+/* Shared theme application. Keep native Wilma sprite backgrounds unchanged. */
+#oa-dialog .oa-head,#oh-panel>h2,#wt-header{background:var(--oa-surface-accent)!important;color:var(--oa-primary-dark)!important;border-color:var(--oa-border)!important}
+#oh-panel,#wt-panel,#oh-home{border-color:var(--oa-primary)!important}
+#oh-tab>a,#wt-class-assessment-tab>a,#wt-class-issues-tab>a{color:var(--oa-primary-dark)!important}
+#wt-message-library #wt-library-tabs{border-bottom-color:var(--oa-border)!important}
+#wt-message-library #wt-library-tabs button{color:var(--oa-primary-dark)!important}
 #wt-message-toolbar,#wt-message-library{color:var(--oa-text)!important;background:var(--oa-surface)!important;border-color:var(--oa-border)!important}
 #wt-message-toolbar{position:relative!important;padding-right:70px!important;border-left:4px solid var(--oa-primary)!important;border-radius:6px!important}
 #wt-message-toolbar [role="tab"],#wt-library-tabs button{color:var(--oa-primary-dark)!important}
