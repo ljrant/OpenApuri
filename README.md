@@ -4,19 +4,27 @@ OpenApuri on avoimen lähdekoodin kokoelma Wilman selaintyökaluja. Projekti ei 
 
 **Verkkosivu:** https://ljrant.github.io/OpenApuri/
 
-## Asennus
+## Asennus — yksi skripti
 
-Asenna Tampermonkey ja haluamasi skriptit. Tietokoneella sivupaneeli ja varsinaiset työkalut asennetaan erikseen.
+**Asenna vain [OpenApuri 1.0.2](https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuri.user.js).** Skripti toimii Wilman sivuilla Tampermonkeyssa. Se sisältää kaikki moduulit samassa asennuksessa:
 
-| Työkalu | Versio | Asennus |
-| --- | --- | --- |
-| OpenApuri-sivupaneeli (tietokone) | 0.23.2 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js) |
-| Ryhmänohjaajan opintoseuranta | 0.23.2 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuri.user.js) |
-| OpiskelijaHaku – opiskelijoiden työjärjestykset ja opettajat | 0.6.10 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/OpiskelijaHaku.user.js) |
-| Viestiluonnosten tallennus – Chrome tietokoneella | 0.16.18 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/message-autosaver-chrome-desktop.user.js) |
-| Viestiluonnosten tallennus – Firefox Androidissa (kokeellinen) | 0.6.2 | [Asenna](https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/message-autosaver-firefox-android.user.js) |
+| Moduuli | Käyttö |
+| --- | --- |
+| OpenApuri-työkalupalkki | Kuvake Wilman ylätunnisteessa ja pikatoiminnot |
+| Ryhmänohjaajan opintoseuranta | Ryhmien opintosuoritusten tarkastelu |
+| OpiskelijaHaku | Opiskelijoiden ja henkilökunnan haku sekä työjärjestykset |
+| Viestiluonnokset – Chrome | Viestipohjat ja paikallinen automaattitallennus |
+| Viestiluonnokset – Firefox Android | Mobiilin luonnostallennus tuetussa selaimessa |
 
-Skriptit toimivat erikseen Tampermonkeyn kautta ja niitä voi ottaa käyttöön tai poistaa käytöstä itsenäisesti. Pelkkä sivupaneeli ei kerää suorituksia eikä tallenna viestejä. Skriptien osoiterajaus on `https://*.inschool.fi`.
+**Moduuleita hallitaan OpenApurin kuvakkeesta → Asetukset.** Valinnat tallentuvat Wilman paikalliseen selaintallennukseen. Eri moduuleja ei tarvitse asentaa erikseen eikä ottaa erikseen käyttöön Tampermonkeyssa.
+
+### Siirtyminen aiemmista asennuksista
+
+1. Asenna tai päivitä `OpenApuri.user.js` yllä olevasta linkistä.
+2. Poista **kerran** Tampermonkeyssa käytöstä vanhat erillisskriptit (esimerkiksi Desktop Sidebar, OpiskelijaHaku, Chrome-/Android-autosaver ja WilmaTools). Muuten ne voivat suorittua kahdesti. Älä poista uutta OpenApuri-skriptiä.
+3. Päivitä Wilman sivu. Jatkossa kaikki moduulit toimivat yhden OpenApuri-skriptin alla.
+
+Vanhoja tallennusavaimia kopioidaan siirtymässä uuteen `openapuri.*`-nimiavaruuteen, eikä vanhoja tietoja tarkoituksella poisteta.
 
 ## Sivupaneeli ja Wilman etusivu
 
@@ -58,7 +66,7 @@ Firefox Android -versio on **kokeellinen**, toimii vain Androidin Firefox-selaim
 
 OpiskelijaHaku-välilehti näkyy myös opiskelijakohtaisilla `/profiles/students/...`-alisivuilla: alisivulta se avaa opiskelijaluettelon OpiskelijaHaku-välilehden. Haku itsessään sijaitsee edelleen luettelon pääsivulla.
 
-Erillinen Tampermonkey-skripti [**OpiskelijaHaku**](https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/OpiskelijaHaku.user.js) lisää Wilman `/profiles/students`-luetteloon oman välilehden. Suodata opiskelijaluetteloa kirjainkoosta riippumattomalla nimellä tai nimien osilla kummassa tahansa järjestyksessä ja napsauta halutut opiskelijat monivalintaan. Valitse alkamis- ja päättymispäivä sekä tarvittaessa kellonaikaväli. Työkalu hakee kirjautuneessa Wilma-istunnossa `/profiles/students/{id}/schedule?date=D.M.YYYY` -työjärjestysviikot ja kokoaa `.block`-merkinnöistä opintojaksot sekä niiden `.teachers`-linkeistä opettajat. Tulosryhmät näytetään opiskelijoittain: opiskelijan nimi vain kerran otsikkona ja sen alla tiivis opintojakso–opettaja-lista. Opintojakso luetaan työjärjestysmerkinnän `.info`-kentästä, ei `.class`-ryhmämerkinnästä. Toistuvat tunnit yhdistetään opintojaksokohtaisesti. Jos haetusta HTML:stä puuttuu JavaScriptin piirtämä työjärjestys, moduuli yrittää lukea merkinnät selaimessa ladatusta Wilman työjärjestyksestä. Haku kertoo löytyneet ja epäonnistuneet merkinnät, eikä esitä puuttuvia tietoja onnistuneena tyhjänä tuloksena.
+Erillinen Tampermonkey-skripti [**OpiskelijaHaku**](https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuri.user.js) lisää Wilman `/profiles/students`-luetteloon oman välilehden. Suodata opiskelijaluetteloa kirjainkoosta riippumattomalla nimellä tai nimien osilla kummassa tahansa järjestyksessä ja napsauta halutut opiskelijat monivalintaan. Valitse alkamis- ja päättymispäivä sekä tarvittaessa kellonaikaväli. Työkalu hakee kirjautuneessa Wilma-istunnossa `/profiles/students/{id}/schedule?date=D.M.YYYY` -työjärjestysviikot ja kokoaa `.block`-merkinnöistä opintojaksot sekä niiden `.teachers`-linkeistä opettajat. Tulosryhmät näytetään opiskelijoittain: opiskelijan nimi vain kerran otsikkona ja sen alla tiivis opintojakso–opettaja-lista. Opintojakso luetaan työjärjestysmerkinnän `.info`-kentästä, ei `.class`-ryhmämerkinnästä. Toistuvat tunnit yhdistetään opintojaksokohtaisesti. Jos haetusta HTML:stä puuttuu JavaScriptin piirtämä työjärjestys, moduuli yrittää lukea merkinnät selaimessa ladatusta Wilman työjärjestyksestä. Haku kertoo löytyneet ja epäonnistuneet merkinnät, eikä esitä puuttuvia tietoja onnistuneena tyhjänä tuloksena.
 
 **Hakurajat:** enintään 20 opiskelijaa, 16 viikon ajanjakso ja 120 työjärjestysverkkopyyntöä kerrallaan; enintään kolme rinnakkaista hakua. Opiskelijavalikko ei näytä oletuksena Ohjaamasi tai valvomasi opiskelijat -osion nimiä. Versiossa 0.4.4 valitut opintojaksorivit voi osoittaa opiskelijoille, opettajille ja vahvistettujen Wilma-viestilinkkien perusteella huoltajille yhteisen vastaanottajavalitsimen kautta. Laajemmat Wilman luettelot ladataan vasta hakukentän käytön tai Päivitä opiskelijaluettelo -painikkeen yhteydessä; hakukenttä suodattaa listaa lennossa. Jos henkilöä ei löydy luettelosta tai nimellä on useita osumia, käyttäjän on tarkennettava hakua. Wilman erillisen nimihakurajapinnan tukea ei ole vielä vahvistettu.
 
@@ -236,3 +244,8 @@ OpenApurin työkalupalkin versiosta 0.23.2 alkaen Wilman logon vieressä näkyy 
 ### OpenApuri v0.23.2: avaa moduulit suoraan asetuksista
 
 Asetusikkunan OpiskelijaHaku-näkymässä on `Avaa OpiskelijaHaku Wilmassa` -painike, joka vie nykyisen välilehden osoitteeseen `/profiles/students/#opiskelijahaku`. Jos moduuli oli pois käytöstä vain OpenApurin omassa asetustallennuksessa, se aktivoidaan samalla. Myös alapalkkiin lisättiin OpiskelijaHaku-pikatoiminto. Moduulin käyttöönottokytkin ei asenna skriptiä eikä voi käynnistää Tampermonkeyn kokonaan pois kytkemää skriptiä. Työkalupalkin päivitysosoitteet käyttävät nyt `ljrant/OpenApuri`-repon polkua.
+
+
+## OpenApuri 1.0.2 — yhdistetty käyttäjäskripti
+
+Kaikki viisi alkuperäistä Wilma-moduulia toimitetaan nyt yhden `OpenApuri.user.js`-skriptin mukana. Pääskripti suoritetaan `document-start`-vaiheessa, jotta viestiluonnosten tallennus käynnistyy riittävän aikaisin; käyttöliittymän moduulit käynnistetään vasta dokumentin valmistuttua. Kukin moduuli tarkistaa OpenApurin sisäisen `openapuri.modules.v1`-kytkimensä. Moduulien välille lisätyt käynnistyslukot vähentävät päällekkäistä käynnistymistä, mutta aiemmat erillisskriptit kannattaa poistaa käytöstä. Logo avaa sisäiset moduuliasetukset; erillistä HTML-asetussivua ei käytetä. Abitti-integraatio vaatii edelleen kyseisen palvelun osoitteen ja käyttöliittymärakenteen varmistamisen.
