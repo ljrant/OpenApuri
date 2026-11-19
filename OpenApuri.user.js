@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.1
-// @description  OpenApuri: one install, all Wilma tools and in-app module settings
+// @version      1.0.2
+// @description  Yksi asennus: OpenApurin Wilma-työkalut ja moduulikohtaiset asetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
 // @grant        none
@@ -14,23 +14,17 @@
 'use strict';
 const embeddedSearch=window.top!==window.self&&new URLSearchParams(location.search).get('oh_embed')==='1'&&/^\/profiles\/students\/?$/.test(location.pathname);
 if(window.top!==window.self&&!embeddedSearch)return;
-// A single entry point prevents duplicate initialization when multiple
-// OpenApuri modules are enabled on a Wilma page.
 if(window.__openApuriBundleV1)return;
 window.__openApuriBundleV1=true;
-const path=location.pathname;
-const whenReady=callback=>{
-  const run=()=>{try{callback()}catch(error){console.error('[OpenApuri] Moduulin käynnistys epäonnistui:',error)}};
-  if(document.readyState==='complete'||document.readyState==='interactive')run();
-  else document.addEventListener('DOMContentLoaded',run,{once:true});
+const currentPath=location.pathname;
+const afterDom=callback=>{
+ const run=()=>{try{callback()}catch(error){console.error('[OpenApuri] Moduulin käynnistys epäonnistui:',error)}};
+ if(document.readyState==='complete'||document.readyState==='interactive')run();
+ else document.addEventListener('DOMContentLoaded',run,{once:true});
 };
-const start=callback=>{
-  try{callback()}catch(error){console.error('[OpenApuri] Viestiluonnosmoduuli ei käynnistynyt:',error)}
-};
- 
-if(!embeddedSearch&&path.startsWith('/messages/compose')){
-  start(()=>{
-    (function () {
+const immediately=callback=>{try{callback()}catch(error){console.error('[OpenApuri] Luonnosmoduulin käynnistys epäonnistui:',error)}};
+if(!embeddedSearch&&currentPath.startsWith('/messages/compose')){
+ immediately(()=>{(function () {
     'use strict';
 // Per-module state controlled by OpenApuri's in-app settings menu.
 try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').draftsChrome===false)return;}catch{}
@@ -48,6 +42,8 @@ try {
     // Only activate the intended browser variant, avoiding two simultaneous autosavers.
     const ua = navigator.userAgent;
     if ( /Android|iPhone|iPad|iPod/i.test(ua) || !/Chrome|Chromium/i.test(ua) || /Edg\//i.test(ua)) return;
+    if(window.__openApuriChromeDrafts)return;
+    window.__openApuriChromeDrafts=true;
 
     // Drafts are sensitive: stored only on this origin in localStorage; clear after sending.
     const STORAGE_KEY = 'wilma-compose-autosave:' + location.hostname + location.pathname;
@@ -1414,10 +1410,8 @@ try {
     // The desktop toolbar can reopen the local controls without changing save/restore logic.
     window.addEventListener('openapuri:open-autosaver', () => {const lib=document.getElementById('wt-message-library');if(lib)lib.hidden=false;else library()});
     ready(init);
-})();
-  });
-  start(()=>{
-    (function () {
+})();});
+ immediately(()=>{(function () {
     'use strict';
 // Per-module state controlled by OpenApuri's in-app settings menu.
 try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').draftsAndroid===false)return;}catch{}
@@ -1425,6 +1419,8 @@ try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').draftsAnd
     // Only activate the intended browser variant, avoiding two simultaneous autosavers.
     const ua = navigator.userAgent;
     if (!(/Android/i.test(ua) && /Firefox|Fennec/i.test(ua))) return;
+    if(window.__openApuriAndroidDrafts)return;
+    window.__openApuriAndroidDrafts=true;
 
     // Drafts are sensitive: stored only on this origin in localStorage; clear after sending.
     const STORAGE_KEY = 'wilma-compose-autosave:' + location.hostname + location.pathname;
@@ -2333,12 +2329,9 @@ try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').draftsAnd
     }
 
     ready(init);
-})();
-  });
+})();});
 }
-if(!embeddedSearch)whenReady(()=>{
-  // The toolbar owns OpenApuri's logo and per-module settings dialog.
-  (() => {
+if(!embeddedSearch)afterDom(()=>{(() => {
 'use strict';
 // One-time compatible copy of older local data; never overwrite OpenApuri values.
 try {
@@ -2350,7 +2343,8 @@ try {
   }
 } catch(e){console.warn('[OpenApuri] Aiemman tallennustiedon kopiointi ei onnistunut:',e)}
 
-if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||window.__openApuriHub)return;
+if(window.__openApuriHub)return;
+const oaMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 window.__openApuriHub=true;
 const KEY='openapuri.settings',lastKey='openapuri.lastGradebook';
 const t={fi:{tools:'Työkalut',progress:'Ryhmänohjaajan arviointinäkymä',autosave:'Viestiluonnosten tallennus',write:'Kirjoita viesti',templates:'Viestipohjat',drafts:'Tallennetut viestit',settings:'Asetukset',language:'Kieli',close:'Sulje',open:'Avaa',install:'Asenna moduuli',hint:'Työkalut otetaan käyttöön tai pois käytöstä Tampermonkeyssa.',unknown:'Avaa ensin opiskelijan opintosuoritussivu, jotta pikavalinta voidaan tallentaa.',home:'Pikavalinta ryhmänohjaajan arviointiin',notEnabled:'Moduuli ei ole tällä sivulla käytettävissä.'},en:{tools:'Tools',progress:'Homeroom grade overview',autosave:'Message draft autosaver',write:'Compose message',templates:'Message templates',drafts:'Saved drafts',settings:'Settings',language:'Language',close:'Close',open:'Open',install:'Install module',hint:'Enable and disable modules in Tampermonkey.',unknown:'First open a student gradebook so the shortcut can be saved.',home:'Homeroom grade overview shortcut',notEnabled:'Module is not available on this page.'}};
@@ -2521,6 +2515,7 @@ function templateEditor(){openMessageLibrary('templates')}
 function draftSidebar(){openMessageLibrary('drafts')}
 function draw(){
  panel.replaceChildren();
+ if(oaMobile){panel.style.display='none';return;}
  if(oaRead().toolbar===false){panel.style.display='none';return}else panel.style.display='';
  const heading=label('h2','OpenApuri');panel.append(heading);
  const commands=[
@@ -2801,11 +2796,9 @@ if(['/', '/index','/dashboard','/home'].includes(location.pathname)){
  let tries=0;
  const interval=setInterval(()=>{attachHome();swapTwoHomepageBoxes();if(++tries>=12)clearInterval(interval)},1000);
 }
-})();
-});
-if(!embeddedSearch&&/^\/profiles\/classes\/\d+(?:\/|$)/.test(path))
-  whenReady(()=>{
-    (() => {
+})();});
+if(!embeddedSearch&&/^\/profiles\/classes\/\d+(?:\/|$)/.test(currentPath))
+ afterDom(()=>{(() => {
 'use strict';
 // Per-module state controlled by OpenApuri's in-app settings menu.
 try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').progress===false)return;}catch{}
@@ -3062,11 +3055,9 @@ async function collect(){
 }
 function download(){const header=['Student','Course','Category','Subject','Grade','ECTS','Completion date','Teacher'];const cells=[header,...selected().map(r=>[r.student,r.name,r.group,r.subject,r.grade,r.ects,r.date,r.teacher])];const quote=v=>{let s=String(v??'');if(/^\s*[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'};const csv='\ufeff'+cells.map(x=>x.map(quote).join(';')).join('\r\n');const u=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=el('a');a.href=u;a.download='wilmatools_progress.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500)}
 })();
-
-  });
-if(path==='/'||/^\/profiles\/(?:students|teachers)(?:\/|$)/.test(path))
-  whenReady(()=>{
-    (() => {
+});
+if(currentPath==='/'||/^\/profiles\/(?:students|teachers)(?:\/|$)/.test(currentPath))
+ afterDom(()=>{(() => {
 'use strict';
 // Per-module state controlled by OpenApuri's in-app settings menu.
 try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').search===false)return;}catch{}
@@ -3822,6 +3813,5 @@ if(directoryPage){
     const hide=make('style');hide.textContent='body>header,body>nav,#navigation,.navbar,.breadcrumb,#oh-tab{display:none!important} main#main-content{padding:0!important} #oh-panel{padding:8px!important}';document.head.append(hide);
   }
 }
-})();
-  });
+})();});
 })();
