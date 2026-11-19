@@ -184,6 +184,7 @@ function oaTemplateSettings(main){
  save.onclick=()=>{
   if(!name.value.trim()||!subject.value.trim()){status.textContent='Anna nimi ja aihe.';return}
   const item={...(records[index]||{category:'Yleinen',recipientRule:'ei_valintaa',messageMode:'group'}),title:name.value.trim().slice(0,120),subject:subject.value.trim().slice(0,250),body:body.value};
+  if(records[index]&&records[index].body!==body.value)delete item.bodyHtml;
   if(index<0){if(records.length>=150){status.textContent='Enintään 150 pohjaa.';return}index=records.length;records.push(item)}else records[index]=item;
   localStorage.setItem(TEMPLATE_KEY,JSON.stringify(records));refresh();status.textContent='Tallennettu';
  };
@@ -283,7 +284,7 @@ oaLauncher.setAttribute('aria-label','Avaa OpenApurin asetukset');
 const oaImg=oaElement('img');oaImg.alt='OpenApuri';oaImg.src=OA_LOGO;oaLauncher.append(oaImg);
 
 const oaModulePopup=oaElement('div');oaModulePopup.id='oa-module-menu';oaModulePopup.hidden=true;document.body.append(oaModulePopup);
-const oaMenuItems=[['Haku','/profiles/students/#opiskelijahaku'],['Ryhmäni','/groups'],['Istumajärjestys','/groups'],['Arviointinäkymä','/groups'],['Viestit','/messages'],['Kirjoita viesti','/messages/compose']];
+const oaMenuItems=[['Haku','/profiles/students/#opiskelijahaku'],['Ryhmät','/groups'],['Istumajärjestys','/groups'],['Viestit','/messages'],['Kirjoita viesti','/messages/compose']];
 function oaCloseMenu(){oaModulePopup.hidden=true;oaLauncher.setAttribute('aria-expanded','false')}
 function oaToggleMenu(){
  if(!oaModulePopup.hidden){oaCloseMenu();return}
@@ -358,7 +359,7 @@ const route=()=>grade.test(location.pathname)?location.pathname+'?view=gradebook
 function linkProgress(){if(/^\/profiles\/classes\/\d+\/?$/.test(location.pathname)){document.querySelector('#wt-class-assessment-tab a')?.click();return}location.assign('/')}
 
 const TEMPLATE_KEY='openapuri.messageTemplates.v1';
-function templates(){try{const a=JSON.parse(localStorage.getItem(TEMPLATE_KEY)||'[]');return Array.isArray(a)?a.filter(v=>v&&typeof v.title==='string'&&typeof v.subject==='string'&&typeof v.body==='string').slice(0,50):[]}catch{return []}}
+function templates(){try{const a=JSON.parse(localStorage.getItem(TEMPLATE_KEY)||'[]');return Array.isArray(a)?a.filter(v=>v&&typeof v.title==='string'&&typeof v.subject==='string'&&typeof v.body==='string').slice(0,150):[]}catch{return []}}
 function saveTemplates(data){localStorage.setItem(TEMPLATE_KEY,JSON.stringify(data))}
 function openMessageLibrary(section){
  if(location.pathname.startsWith('/messages/compose')){
@@ -371,10 +372,10 @@ function templateEditor(){openMessageLibrary('templates')}
 function draftSidebar(){openMessageLibrary('drafts')}
 
 const OA_GROUP_PREF='openapuri.groupOpeningTab.v1';
-const OA_GROUP_VIEWS=[['seating','Istumajärjestys'],['main','Ryhmän etusivu'],['assessment','Arviointinäkymä'],['issues','Huomiot']];
+const OA_GROUP_VIEWS=[['seating','Istumajärjestys'],['main','Ryhmän etusivu']];
 const oaGroupDestination=id=>{
  const n=encodeURIComponent(id),tab=localStorage.getItem(OA_GROUP_PREF)||'seating';
- return tab==='main'?'/groups/'+n:tab==='assessment'?'/profiles/classes/'+n+'/#wt-assessment':tab==='issues'?'/profiles/classes/'+n+'/#wt-issues':'/groups/'+n+'/seating';
+ return tab==='main'?'/groups/'+n:'/groups/'+n+'/seating';
 };
 let oaGroupsCache=null,oaGroupsFetch=null;
 async function oaGetGroups(){
