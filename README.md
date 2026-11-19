@@ -274,3 +274,10 @@ Wilman alkuperäisen logon ympärillä olevaa ylimääräistä vaakasuuntaista t
 ### Istumajärjestys sisältyy OpenApuriin (1.0.20)
 
 `OpenApuri.user.js` sisältää nyt myös istumajärjestysmoduulin. Erillistä istumajärjestysskriptiä ei tarvitse asentaa uusille käyttäjille. Aiempi itsenäinen versio tallensi tiedot Tampermonkeyn GM-tallennukseen. **Jos sinulla on vanhoja tallenteita**, päivitä vanha `modules/seating-plans.user.js` ensin versioon 1.5.2 ja käy kerran istumajärjestyssivulla: päivitys kopioi olemassa olevat tallenteet yhteiseen selainpohjaiseen tallennukseen ilman ylikirjoittamista. Poista sen jälkeen erillinen istumajärjestysskripti käytöstä, jotta kaksi versiota eivät toimi päällekkäin. Älä poista vanhaa skriptiä ennen tietojen siirtoa. Tiedot ovat edelleen selain- ja Wilma-osoitekohtaisia.
+
+### OpenApuri 1.0.20: alapalkin Ryhmäni-valikko ja asetukset
+
+- Alapalkin **Ryhmäni ▴** näyttää Wilman `/groups`-ryhmäluettelosta ladatut opetusryhmät. Valikko aukeaa ylöspäin, ja ryhmän valitseminen siirtyy oletuksena sen istumajärjestyssivulle.
+- **Asetukset → Istumajärjestys** antaa valita ryhmän avautumisen oletusnäkymäksi *Istumajärjestyksen* tai *Ryhmän etusivun*. Vain Wilman tunnetut ryhmäosoitteet ovat valittavina; muiden näkymien ryhmätunnisteita ei päätellä.
+- Alapalkista poistettiin erilliset *Viestipohjat* ja *Luonnokset*. **Asetukset → Viestipohjat** sisältää pohjien nimi-, aihe- ja sisältöeditorin. **Asetukset → Viestiluonnokset · Chrome/Android** sisältää automaattitallennuksen moduulin päälle/pois-valinnan; viestikirjaston luonnoksia voi edelleen käsitellä viestinäkymässä.
+- Yläpalkin OpenApuri-logon napsauttaminen avaa nyt alas avautuvan moduulivalikon, josta löytyvät haku, ryhmät, istumajärjestys, viestit, viestin kirjoitus ja asetukset.
