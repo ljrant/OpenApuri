@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.19.7
+// @version      0.19.8
 // @description  Local Wilma homeroom gradebook overview, FI/EN
 // @match        https://*.inschool.fi/profiles/classes/*
 // @grant        none
@@ -115,15 +115,17 @@ function installAssessmentTab(){
  const tabs=tabStrip();
  if(!tabs||document.getElementById('wt-class-assessment-tab'))return;
  const item=document.createElement('li');item.id='wt-class-assessment-tab';item.classList.add('oa-added-tab');
- const link=el('a',cfg.lang==='fi'?'Arviointinäkymä':'Grade overview');const mark=document.createElement('span');mark.className='oa-tab-mark';mark.setAttribute('aria-hidden','true');mark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';link.prepend(mark);
+ const link=el('a',cfg.lang==='fi'?'Arviointinäkymä':'Grade overview');
  link.href=classBase+'#wt-assessment';
  link.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment()});
  item.append(link);
+ const progressPeeker=document.createElement('button');progressPeeker.type='button';progressPeeker.className='oa-peeker-settings';progressPeeker.title='OpenApuri · Asetukset';progressPeeker.setAttribute('aria-label','Avaa OpenApurin Opintoseurannan asetukset');progressPeeker.style.cssText='position:absolute;top:-20px;right:11px;width:38px;height:37px;padding:0;margin:0;border:0;background:transparent;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center';const progressPeekerImg=document.createElement('img');progressPeekerImg.src='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriPeeker.png';progressPeekerImg.alt='';progressPeekerImg.style.cssText='display:block;width:38px;height:38px;object-fit:contain;pointer-events:none';progressPeeker.append(progressPeekerImg);progressPeeker.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'progress'}}))});item.append(progressPeeker);
  const issuesItem=document.createElement('li');issuesItem.id='wt-class-issues-tab';issuesItem.classList.add('oa-added-tab');
- const issuesLink=el('a',cfg.lang==='fi'?'Huomiot':'Issues');const issueMark=document.createElement('span');issueMark.className='oa-tab-mark';issueMark.setAttribute('aria-hidden','true');issueMark.style.cssText='display:inline-block;width:7px;height:7px;min-width:7px;margin:0 6px 1px 0;vertical-align:middle;border-radius:50%;background:#21a995;box-shadow:0 0 0 1px #087266';issuesLink.prepend(issueMark);issuesLink.href=classBase+'#wt-issues';
+ const issuesLink=el('a',cfg.lang==='fi'?'Huomiot':'Issues');issuesLink.href=classBase+'#wt-issues';
  
  issuesLink.addEventListener('click',e=>{if(!onClassMain)return;e.preventDefault();e.stopPropagation();activateAssessment('issues')});
  issuesItem.append(issuesLink);
+ const issuesPeeker=document.createElement('button');issuesPeeker.type='button';issuesPeeker.className='oa-peeker-settings';issuesPeeker.title='OpenApuri · Asetukset';issuesPeeker.setAttribute('aria-label','Avaa OpenApurin Opintoseurannan asetukset');issuesPeeker.style.cssText='position:absolute;top:-20px;right:11px;width:38px;height:37px;padding:0;margin:0;border:0;background:transparent;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center';const issuesPeekerImg=document.createElement('img');issuesPeekerImg.src='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriPeeker.png';issuesPeekerImg.alt='';issuesPeekerImg.style.cssText='display:block;width:38px;height:38px;object-fit:contain;pointer-events:none';issuesPeeker.append(issuesPeekerImg);issuesPeeker.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'progress'}}))});issuesItem.append(issuesPeeker);
  const support=[...tabs.querySelectorAll('a')].find(a=>/Tuen tilastot|Support statistics/i.test(a.textContent));
  if(support){
   const dropdown=support.closest('li.dropdown');
