@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.4
+// @version      0.24.5
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -93,8 +93,13 @@ oaStyle.textContent=`
 #oh-home>.panel-heading{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
 #oh-panel{border:2px solid #238d83!important;border-radius:8px!important;background:#f9fffc!important;padding:14px!important}
 #oh-panel>h2{background:#e0f5eb!important;color:#075b50!important;margin:-14px -14px 12px!important;padding:13px 16px!important;border-bottom:2px solid #9cd7c5!important}
-#oh-tab>a,#wt-class-assessment-tab>a{color:#096b5c!important;border-top:3px solid #19a58b!important;background:#e6f7f0!important;font-weight:650!important}
-#oh-tab.active>a,#wt-class-assessment-tab.active>a{color:#fff!important;background:#147c6e!important;border-color:#147c6e!important}
+/* OpenApuri tabs: remove the native slanted endcaps and use one clean tab shape. */
+#oh-tab,#wt-class-assessment-tab,#wt-class-issues-tab{position:relative!important;margin:0 3px 0 0!important;padding:0!important;background:none!important;border:0!important;transform:none!important;box-shadow:none!important}
+#oh-tab::before,#oh-tab::after,#wt-class-assessment-tab::before,#wt-class-assessment-tab::after,#wt-class-issues-tab::before,#wt-class-issues-tab::after,
+#oh-tab>a::before,#oh-tab>a::after,#wt-class-assessment-tab>a::before,#wt-class-assessment-tab>a::after,#wt-class-issues-tab>a::before,#wt-class-issues-tab>a::after{content:none!important;display:none!important}
+#oh-tab>a,#wt-class-assessment-tab>a,#wt-class-issues-tab>a{display:flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important;position:relative!important;height:38px!important;min-height:38px!important;margin:0!important;padding:7px 14px!important;border:1px solid #94cabd!important;border-bottom:0!important;border-radius:5px 5px 0 0!important;background:#e6f7f0!important;background-image:none!important;color:#096b5c!important;font-weight:650!important;font-size:inherit!important;line-height:1.2!important;text-shadow:none!important;box-shadow:none!important;transform:none!important;white-space:nowrap!important}
+#oh-tab>a:hover,#wt-class-assessment-tab>a:hover,#wt-class-issues-tab>a:hover{background:#ccefe3!important;color:#075b50!important}
+#oh-tab.active>a,#wt-class-assessment-tab.active>a,#wt-class-issues-tab.active>a{background:#147c6e!important;color:#fff!important;border-color:#147c6e!important}
 #wt-panel{border:2px solid #238d83!important}
 #wt-header{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
 #oh-panel .oh-recipient-panel{background:#eaf8f2!important;border:1px solid #7bbdaa!important}
