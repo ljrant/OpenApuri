@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Message Autosaver (Chrome Desktop)
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.16.19
+// @version      0.16.20
 // @description  Chrome desktop local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
@@ -921,7 +921,8 @@ try {
     function library(){
       const existing=document.getElementById('wt-message-library');if(existing){existing.hidden=false;existing.scrollIntoView({block:'nearest'});return}
       const aside=document.createElement('section');aside.id='wt-message-library';aside.setAttribute('aria-label','Viestikirjasto');
-      aside.style.cssText='position:relative;flex:1 1 340px;min-width:280px;max-width:640px;background:#f7f9fc;color:#22394d;border:1px solid #cdd8e2;border-radius:6px;padding:16px;max-height:78vh;overflow:auto;font:14px/1.45 system-ui;box-sizing:border-box';
+      aside.style.cssText='position:relative;flex:1 1 340px;min-width:280px;max-width:640px;background:var(--oa-surface,#f5fbf8);color:var(--oa-text,#173c48);border:1px solid var(--oa-border,#9cd7c5);border-radius:6px;padding:16px;max-height:78vh;overflow:auto;font:14px/1.45 system-ui;box-sizing:border-box';
+      const messagePeeker=document.createElement('button');messagePeeker.type='button';messagePeeker.className='oa-message-peeker';messagePeeker.title='OpenApuri · Viestiasetukset';messagePeeker.setAttribute('aria-label','Avaa viestityökalujen asetukset');messagePeeker.style.cssText='position:absolute;right:14px;top:-20px;width:44px;height:46px;border:0;background:transparent;padding:0;cursor:pointer;z-index:40';const messagePeekerImage=document.createElement('img');messagePeekerImage.src='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriPeeker.png';messagePeekerImage.alt='';messagePeekerImage.style.cssText='width:44px;height:46px;object-fit:contain;pointer-events:none';messagePeeker.append(messagePeekerImage);messagePeeker.onclick=event=>{event.preventDefault();event.stopPropagation();window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'draftsChrome'}}))};aside.append(messagePeeker);
       const form=$(SEL.subject)?.closest('form');
       // NEVER reparent Wilma's form: CKEditor iframe loses its document/selection
       // when the form is detached and reinserted after editor initialization.
@@ -944,7 +945,7 @@ try {
         navigation.append(control);
       }
       navigation.style.cssText='display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #ccc;padding:0 0 8px;margin-bottom:8px';
-      const refreshNavigation=()=>navigation.querySelectorAll('button').forEach(x=>{x.style.cssText='border:0;background:transparent;padding:6px;color:#245675;cursor:pointer;border-bottom:2px solid '+(x.dataset.tab===tab?'#27648b':'transparent')});
+      const refreshNavigation=()=>navigation.querySelectorAll('button').forEach(x=>{x.setAttribute('aria-selected',String(x.dataset.tab===tab));x.style.cssText='border:0;background:transparent;padding:6px;color:#245675;cursor:pointer;border-bottom:2px solid '+(x.dataset.tab===tab?'var(--oa-primary,#147c6e)':'transparent')});
 
       const sent=safeRead('openapuri.sentTemplateImport.v1',null);
       if(sent&&Number.isFinite(sent.createdAt)&&Date.now()-sent.createdAt<15*60*1000){
