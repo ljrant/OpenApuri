@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.7
+// @version      0.24.8
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -93,20 +93,12 @@ oaStyle.textContent=`
 #oh-home>.panel-heading{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
 #oh-panel{border:2px solid #238d83!important;border-radius:8px!important;background:#f9fffc!important;padding:14px!important}
 #oh-panel>h2{background:#e0f5eb!important;color:#075b50!important;margin:-14px -14px 12px!important;padding:13px 16px!important;border-bottom:2px solid #9cd7c5!important}
-/* Unified OpenApuri tabs: consistent sloped Wilma-style silhouettes, including active tabs.
-   New OpenApuri tabs can opt in by adding the oa-added-tab class to their <li>. */
-ul.nav-tabs .oa-added-tab{position:relative!important;display:list-item!important;margin:0 3px 0 0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;transform:none!important}
-ul.nav-tabs .oa-added-tab::before,ul.nav-tabs .oa-added-tab::after{content:none!important;display:none!important}
-ul.nav-tabs .oa-added-tab>a{position:relative!important;isolation:isolate!important;display:flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important;min-height:34px!important;height:34px!important;padding:7px 16px!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;background-image:none!important;box-shadow:none!important;transform:none!important;text-shadow:none!important;white-space:nowrap!important;font-size:13px!important;font-weight:600!important;line-height:1.2!important;color:#096b5c!important;z-index:1!important}
-ul.nav-tabs .oa-added-tab>a::before,ul.nav-tabs .oa-added-tab>a::after{content:""!important;display:block!important;position:absolute!important;pointer-events:none!important;clip-path:polygon(9px 0,calc(100% - 9px) 0,100% 100%,0 100%)!important;border:0!important;transform:none!important}
-ul.nav-tabs .oa-added-tab>a::before{inset:0!important;z-index:-2!important;background:#cbd8d8!important}
-ul.nav-tabs .oa-added-tab>a::after{inset:1px 1px 0!important;z-index:-1!important;background:#f7faf9!important}
-ul.nav-tabs .oa-added-tab>a:hover{color:#075b50!important}
-ul.nav-tabs .oa-added-tab>a:hover::after{background:#e1f2ec!important}
-ul.nav-tabs .oa-added-tab.active>a{color:#fff!important;font-weight:700!important}
-ul.nav-tabs .oa-added-tab.active>a::before{background:#4c970c!important}
-ul.nav-tabs .oa-added-tab.active>a::after{background:#147c6e!important}
-ul.nav-tabs .oa-added-tab>a:focus-visible{outline:2px solid #4c970c!important;outline-offset:1px!important}
+/* Match Wilma's built-in tab graphics and active green border exactly.
+   The native nav-tabs-primary rules render the middle and sloped side images
+   on the anchor and its pseudo-elements; do not override their geometry. */
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a{color:#096b5c!important}
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab>a:hover{color:#075b50!important}
+ul.nav-tabs.nav-tabs-primary>li.oa-added-tab.active>a{color:#096b5c!important}
 #wt-panel{border:2px solid #238d83!important}
 #wt-header{background:#e0f5eb!important;color:#075b50!important;border-bottom:2px solid #9cd7c5!important}
 #oh-panel .oh-recipient-panel{background:#eaf8f2!important;border:1px solid #7bbdaa!important}
