@@ -1,9 +1,11 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.23.1
+// @version      0.23.2
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
+// @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
+// @downloadURL  https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
