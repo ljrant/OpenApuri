@@ -1,17 +1,27 @@
 // ==UserScript==
-// @name         WilmaTools - Desktop Sidebar
-// @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.22.0
-// @description  Finnish-first WilmaTools sidebar on every Wilma page
+// @name         OpenApuri - Desktop Sidebar
+// @namespace    https://github.com/ljrant/OpenApuri
+// @version      0.22.1
+// @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
 (() => {
 'use strict';
-if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||window.__wilmaToolsHub)return;
-window.__wilmaToolsHub=true;
-const KEY='wilmatools.settings',lastKey='wilmatools.lastGradebook';
+// One-time compatible copy of older local data; never overwrite OpenApuri values.
+try {
+  const prefix='wilma'+'tools.';
+  for(const key of ['settings','lastGradebook','messageTemplates.v1','draftHistory.v1','composeRequest.v1','draftRestore.v1','sentTemplateImport.v1']){
+    const target='openapuri.'+key;
+    const old=localStorage.getItem(prefix+key);
+    if(old!==null&&localStorage.getItem(target)===null)localStorage.setItem(target,old);
+  }
+} catch(e){console.warn('[OpenApuri] Aiemman tallennustiedon kopiointi ei onnistunut:',e)}
+
+if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||window.__openApuriHub)return;
+window.__openApuriHub=true;
+const KEY='openapuri.settings',lastKey='openapuri.lastGradebook';
 const t={fi:{tools:'Työkalut',progress:'Ryhmänohjaajan arviointinäkymä',autosave:'Viestiluonnosten tallennus',write:'Kirjoita viesti',templates:'Viestipohjat',drafts:'Tallennetut viestit',settings:'Asetukset',language:'Kieli',close:'Sulje',open:'Avaa',install:'Asenna moduuli',hint:'Työkalut otetaan käyttöön tai pois käytöstä Tampermonkeyssa.',unknown:'Avaa ensin opiskelijan opintosuoritussivu, jotta pikavalinta voidaan tallentaa.',home:'Pikavalinta ryhmänohjaajan arviointiin',notEnabled:'Moduuli ei ole tällä sivulla käytettävissä.'},en:{tools:'Tools',progress:'Homeroom grade overview',autosave:'Message draft autosaver',write:'Compose message',templates:'Message templates',drafts:'Saved drafts',settings:'Settings',language:'Language',close:'Close',open:'Open',install:'Install module',hint:'Enable and disable modules in Tampermonkey.',unknown:'First open a student gradebook so the shortcut can be saved.',home:'Homeroom grade overview shortcut',notEnabled:'Module is not available on this page.'}};
 let lang='fi';try{lang=JSON.parse(localStorage.getItem(KEY)||'{}').lang==='en'?'en':'fi'}catch{}
 const x=k=>t[lang][k],grade=/^\/profiles\/students\/\d+\/choices\/?$/;
@@ -23,19 +33,19 @@ const css=document.createElement('style');css.textContent=`
 @media(max-width:640px){#wt-side-panel{position:static}}
 `;document.head.append(css);
 const btn=document.createElement('button');btn.id='wt-side-toggle';btn.hidden=true;
-const panel=document.createElement('nav');panel.id='wt-side-panel';panel.setAttribute('aria-label','WilmaTools');document.body.append(panel);
+const panel=document.createElement('nav');panel.id='wt-side-panel';panel.setAttribute('aria-label','OpenApuri');document.body.append(panel);
 const label=(tag,text)=>{const a=document.createElement(tag);a.textContent=text;return a};
 const savedGrade=()=>{const value=localStorage.getItem(lastKey)||'';return /^\/profiles\/students\/\d+\/choices(?:\/?|\/?\?.*)$/.test(value)?value:null};
 const route=()=>grade.test(location.pathname)?location.pathname+'?view=gradebook':savedGrade();
 function linkProgress(){if(/^\/profiles\/classes\/\d+\/?$/.test(location.pathname)){document.querySelector('#wt-class-assessment-tab a')?.click();return}location.assign('/')}
 
-const TEMPLATE_KEY='wilmatools.messageTemplates.v1';
+const TEMPLATE_KEY='openapuri.messageTemplates.v1';
 function templates(){try{const a=JSON.parse(localStorage.getItem(TEMPLATE_KEY)||'[]');return Array.isArray(a)?a.filter(v=>v&&typeof v.title==='string'&&typeof v.subject==='string'&&typeof v.body==='string').slice(0,50):[]}catch{return []}}
 function saveTemplates(data){localStorage.setItem(TEMPLATE_KEY,JSON.stringify(data))}
 function openMessageLibrary(section){
  if(location.pathname.startsWith('/messages/compose')){
   panel.hidden=true;
-  window.dispatchEvent(new Event('wilmatools:open-library'));
+  window.dispatchEvent(new Event('openapuri:open-library'));
   return;
  }
  location.assign('/messages/compose#wt-library'+(section==='templates'?'-templates':''));
@@ -44,7 +54,7 @@ function templateEditor(){openMessageLibrary('templates')}
 function draftSidebar(){openMessageLibrary('drafts')}
 function draw(){
  panel.replaceChildren();
- const heading=label('h2','WilmaTools');panel.append(heading);
+ const heading=label('h2','OpenApuri');panel.append(heading);
  const commands=[
   [lang==='fi'?'Kirjoita viesti':'Compose',()=>location.assign('/messages/compose')],
   [lang==='fi'?'Viestipohjat':'Templates',()=>templateEditor()],
@@ -58,8 +68,8 @@ function draw(){
  panel.append(language);
 }
 draw();
-window.addEventListener('wilmatools:open-templates',()=>templateEditor());
-window.addEventListener('wilmatools:open-drafts',()=>draftSidebar());
+window.addEventListener('openapuri:open-templates',()=>templateEditor());
+window.addEventListener('openapuri:open-drafts',()=>draftSidebar());
 
 function safePath(a){try{const u=new URL(a.getAttribute('href'),location.href);return u.origin===location.origin?u.pathname+u.search:null}catch{return null}}
 function txt(s){return String(s||'').replace(/\s+/g,' ').trim()}
@@ -196,7 +206,7 @@ function improveHomeroomLayout(home,tools,groupUrl){
  heading.insertAdjacentElement('afterend',tools);
  // Use a predictable full-width grid regardless of Wilma's original block styles.
  tools.style.display='block';tools.style.width='100%';
- console.info('[WilmaTools] Homeroom two-column layout v0.15.0 applied');
+ console.info('[OpenApuri] Homeroom two-column layout v0.15.0 applied');
  tools.style.cssText='border:0;margin:0;padding:0;font:15px/1.4 system-ui';
  for(const a of tools.querySelectorAll('button,a')){if(!a.classList.contains('badge')){a.style.fontSize='15px';a.style.lineHeight='1.4'}}
  const style=document.createElement('style');style.textContent='#wt-home-tools button,#wt-home-tools a:not(.badge),#wt-course-links button,#wt-course-links a{font-family:system-ui,sans-serif!important;font-size:15px!important;line-height:1.45!important}#wt-course-links{font:15px/1.45 system-ui,sans-serif!important}#wt-home-tools .badge{font-size:12px!important}@media(max-width:560px){#wt-home-layout{grid-template-columns:1fr!important}#wt-home-layout>div:nth-child(2){border-left:0!important;border-top:1px solid #e2e8ed;padding:10px 0 0!important}}';home.append(style);
@@ -279,9 +289,9 @@ function installUnifiedMessageBar(){
  if(/^\/messages\/compose\/?$/.test(location.pathname))return; // Viestikirjasto owns the unified compose navigation.
  const compose=/^\/messages\/compose\/?$/.test(location.pathname);
  const bar=document.createElement('section');bar.id='wt-message-toolbar';
- bar.setAttribute('aria-label','WilmaTools viestityökalut');
+ bar.setAttribute('aria-label','OpenApuri viestityökalut');
  bar.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:7px 9px;margin:0 0 12px;background:#f6f8fa;border:1px solid #d8e1e8;border-radius:5px;font:12px system-ui;color:#29465c;max-width:100%;box-sizing:border-box;';
- const brand=document.createElement('strong');brand.textContent='WilmaTools';brand.style.cssText='font-size:12px;margin-right:6px';bar.append(brand);
+ const brand=document.createElement('strong');brand.textContent='OpenApuri';brand.style.cssText='font-size:12px;margin-right:6px';bar.append(brand);
  const button=(name,action)=>{const b=document.createElement('button');b.type='button';b.textContent=name;b.setAttribute('role','tab');b.setAttribute('aria-selected','false');b.style.cssText='background:transparent;color:#2a5676;border:0;border-bottom:2px solid transparent;padding:7px 11px;cursor:pointer;font:13px system-ui';b.addEventListener('click',action);bar.append(b);return b};
  bar.setAttribute('role','tablist');
  const activate=(name)=>{
@@ -290,7 +300,7 @@ function installUnifiedMessageBar(){
    b.style.borderBottomColor=active?'#27648b':'transparent';
    b.style.fontWeight=active?'600':'400';
   }
-  if(compose)window.dispatchEvent(new CustomEvent('wilmatools:show-library',{detail:{section:name}}));
+  if(compose)window.dispatchEvent(new CustomEvent('openapuri:show-library',{detail:{section:name}}));
  };
  const message=button('Viesti',()=>activate('message'));message.dataset.tab='message';
  const templates=button('Viestipohjat',()=>{if(compose)activate('templates');else location.assign('/messages/compose#wt-library-templates')});templates.dataset.tab='templates';
@@ -301,13 +311,13 @@ function installUnifiedMessageBar(){
    if(!body||!body.textContent.trim()){alert('Viestisisältöä ei löydy. Odota viestin latautumista.');return}
    const h=main.querySelector('h1');
    const subject=(h?.textContent||'').trim().slice(0,250);
-   localStorage.setItem('wilmatools.sentTemplateImport.v1',JSON.stringify({subject,body:(body.innerText||body.textContent||'').trim(),bodyHtml:body.innerHTML,createdAt:Date.now()}));
+   localStorage.setItem('openapuri.sentTemplateImport.v1',JSON.stringify({subject,body:(body.innerText||body.textContent||'').trim(),bodyHtml:body.innerHTML,createdAt:Date.now()}));
    location.assign('/messages/compose#wt-library-templates');
   });save.setAttribute('role','button')}
- else{const save=button('Tallenna nykyinen pohjaksi',()=>{activate('templates');window.dispatchEvent(new CustomEvent('wilmatools:save-compose-template'))});save.setAttribute('role','button')}
+ else{const save=button('Tallenna nykyinen pohjaksi',()=>{activate('templates');window.dispatchEvent(new CustomEvent('openapuri:save-compose-template'))});save.setAttribute('role','button')}
  const active=compose?(location.hash==='#wt-library'?'drafts':location.hash==='#wt-library-templates'?'templates':'message'):'message';
  for(const b of bar.querySelectorAll('[role="tab"]')){const yes=b.dataset.tab===active;b.setAttribute('aria-selected',String(yes));b.style.borderBottomColor=yes?'#27648b':'transparent'}
- window.addEventListener('wilmatools:library-closed',()=>{for(const b of bar.querySelectorAll('[role="tab"]')){const yes=b.dataset.tab==='message';b.setAttribute('aria-selected',String(yes));b.style.borderBottomColor=yes?'#27648b':'transparent'}});
+ window.addEventListener('openapuri:library-closed',()=>{for(const b of bar.querySelectorAll('[role="tab"]')){const yes=b.dataset.tab==='message';b.setAttribute('aria-selected',String(yes));b.style.borderBottomColor=yes?'#27648b':'transparent'}});
  main.insertAdjacentElement('afterbegin',bar);
 }
 if(/^\/messages\//.test(location.pathname)){
