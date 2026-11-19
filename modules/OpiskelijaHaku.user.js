@@ -1,18 +1,28 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
-// @namespace    https://github.com/ljrant/WilmaTools
-// @version      0.6.8
+// @namespace    https://github.com/ljrant/OpenApuri
+// @version      0.6.9
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
 // @match        https://*.inschool.fi/
 // @run-at       document-idle
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js
-// @downloadURL  https://raw.githubusercontent.com/ljrant/WilmaTools/main/modules/OpiskelijaHaku.user.js
+// @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/OpiskelijaHaku.user.js
+// @downloadURL  https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/OpiskelijaHaku.user.js
 // ==/UserScript==
 (() => {
 'use strict';
+// One-time compatible copy of older local data; never overwrite OpenApuri values.
+try {
+  const prefix='wilma'+'tools.';
+  for(const key of ['settings','lastGradebook','messageTemplates.v1','draftHistory.v1','composeRequest.v1','draftRestore.v1','sentTemplateImport.v1']){
+    const target='openapuri.'+key;
+    const old=localStorage.getItem(prefix+key);
+    if(old!==null&&localStorage.getItem(target)===null)localStorage.setItem(target,old);
+  }
+} catch(e){console.warn('[OpenApuri] Aiemman tallennustiedon kopiointi ei onnistunut:',e)}
+
 // Prevent duplicated tool initialization inside the hidden schedule viewer.
 const embedPage=new URLSearchParams(location.search).get('oh_embed')==='1';
 if(window.top!==window.self&&!embedPage)return;
@@ -619,7 +629,7 @@ async function composeForSelection(courseRows,kinds,button,options={}){
    recipientQuery:[...url.searchParams].map(([key,val])=>key+'='+val),
    savedRecipients:savedSnapshot
  };
- localStorage.setItem('wilmatools.composeRequest.v1',JSON.stringify(transfer));
+ localStorage.setItem('openapuri.composeRequest.v1',JSON.stringify(transfer));
  if(tab){try{tab.opener=null;tab.location.replace(url.href)}catch(e){tab.close();say('Viestin avaus epäonnistui.',true);return}}
  else window.open(url.href,'_blank','noopener');
  say('Wilman viestinkirjoitus avattu.'+(missing.length?' Huomautus näytetään viestisivulla: '+missing.join('; '):''),missing.length>0);
@@ -655,8 +665,8 @@ const getSaved=(key)=>{try{const data=JSON.parse(localStorage.getItem(key)||'[]'
 let templates=[];
 function reloadTemplates(){
  templates=[
- ...getSaved('wilmatools.messageTemplates.v1').filter(t=>t?.title).map(t=>({kind:'template',name:'Pohja: '+t.title,subject:t.subject||'',body:t.body||'',html:t.bodyHtml||''})),
- ...getSaved('wilmatools.draftHistory.v1').filter(t=>t?.subject).map(t=>({kind:'draft',name:'Luonnos: '+t.subject,subject:t.subject||'',body:t.bodyHtml||'',html:t.bodyHtml||'',recipientQuery:t.recipientQuery||[],recipients:t.recipients||null}))];
+ ...getSaved('openapuri.messageTemplates.v1').filter(t=>t?.title).map(t=>({kind:'template',name:'Pohja: '+t.title,subject:t.subject||'',body:t.body||'',html:t.bodyHtml||''})),
+ ...getSaved('openapuri.draftHistory.v1').filter(t=>t?.subject).map(t=>({kind:'draft',name:'Luonnos: '+t.subject,subject:t.subject||'',body:t.bodyHtml||'',html:t.bodyHtml||'',recipientQuery:t.recipientQuery||[],recipients:t.recipients||null}))];
  templateSelect.replaceChildren();const first=make('option','','Valitse viestipohja tai tallennettu luonnos');first.value='';templateSelect.append(first);
  templates.forEach((t,i)=>{const el=make('option','',t.name);el.value=String(i);templateSelect.append(el)});
 }
