@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.24
+// @version      1.0.25
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -1146,6 +1146,7 @@ try {
       window.addEventListener('openapuri:open-library',()=>{const lib=document.getElementById('wt-message-library');if(lib)lib.hidden=false;else library()});
     }
     function saveDraft(reason) {
+        if(localStorage.getItem('openapuri.draftAutosaveEnabled')==='false')return;
         if(setBodyHtml.pending)return;
         try {
             const draft = collectDraft();
@@ -2063,6 +2064,7 @@ try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').messages=
     }
 
     function saveDraft(reason) {
+        if(localStorage.getItem('openapuri.draftAutosaveEnabled')==='false')return;
         try {
             const draft = collectDraft();
 
@@ -2566,7 +2568,11 @@ function oaRender(id){
   });
   if(id==='messages'){
    main.append(oaElement('h3','Luonnosten automaattitallennus'));
-   const explanation=oaElement('p','Viestien luonnokset tallennetaan selaimeen. Kun Viestit-moduuli on käytössä, automaattitallennus toimii tuetuilla selaimilla.');
+   const draftPref=oaElement('label');draftPref.className='oa-template-field';
+   const draftCheck=oaElement('input');draftCheck.type='checkbox';draftCheck.checked=localStorage.getItem('openapuri.draftAutosaveEnabled')!=='false';
+   draftCheck.onchange=()=>localStorage.setItem('openapuri.draftAutosaveEnabled',String(draftCheck.checked));
+   draftPref.append(draftCheck,oaElement('span','Tallenna viestiluonnokset automaattisesti'));main.append(draftPref);
+   const explanation=oaElement('p','Luonnokset tallennetaan vain tähän selaimeen. Asetus vaikuttaa uusiin tallennuksiin.');
    main.append(explanation);
    main.append(oaElement('h3','Viestipohjat'));
    oaTemplateSettings(main);
@@ -3080,7 +3086,7 @@ const t=(k,v={})=>(T[cfg.lang][k]||k).replace(/\{(\w+)\}/g,(_,x)=>v[x]??'');
 const tidy=x=>String(x??'').replace(/\s+/g,' ').trim(),p=/^\/profiles\/students\/(\d+)\/choices\/?$/;
 const sy=()=>{let d=new Date();return d.getFullYear()-(d.getMonth()<7?1:0)};
 const saved=(()=>{try{return JSON.parse(localStorage.getItem('openapuri.settings')||'{}')}catch{return {}}})();
-const cfg={lang:saved.lang==='en'?'en':'fi',enabled:saved.enabled!==false,hidden:new Set(saved.hidden||[])};
+const cfg={lang:saved.lang==='en'?'en':'fi',enabled:(()=>{try{const m=JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}');return m.guidance===true?true:saved.enabled!==false}catch{return saved.enabled!==false}})(),hidden:new Set(saved.hidden||[])};
 const save=()=>localStorage.setItem('openapuri.settings',JSON.stringify({lang:cfg.lang,enabled:cfg.enabled,hidden:[...cfg.hidden]}));
 const state={loaded:false,source:'dropdown',messageSubject:'',messageText:'',messageStudentIds:new Set(),people:[],rows:[],errors:[],mode:'matrix',nameDescending:false,period:'school',year:sy(),from:'',to:'',term:'',sort:'',busy:false,stop:false};
 const isoDate=s=>{let m=tidy(s).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(!m)return /^\d{4}-\d{2}-\d{2}$/.test(tidy(s))?tidy(s):'';let d=new Date(+m[3],+m[2]-1,+m[1]);return d.getDate()===+m[1]&&d.getMonth()===+m[2]-1&&d.getFullYear()===+m[3]?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):''};
