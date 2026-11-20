@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.22
+// @version      1.0.23
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -27,7 +27,7 @@ if(!embeddedSearch&&currentPath.startsWith('/messages/compose')){
  immediately(()=>{(function () {
     'use strict';
 // Per-module state controlled by OpenApuri's in-app settings menu.
-try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').draftsChrome===false)return;}catch{}
+try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').messages===false)return;}catch{}
 
 // One-time compatible copy of older local data; never overwrite OpenApuri values.
 try {
@@ -1415,7 +1415,7 @@ try {
  immediately(()=>{(function () {
     'use strict';
 // Per-module state controlled by OpenApuri's in-app settings menu.
-try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').draftsAndroid===false)return;}catch{}
+try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').messages===false)return;}catch{}
 
     // Only activate the intended browser variant, avoiding two simultaneous autosavers.
     const ua = navigator.userAgent;
@@ -2574,7 +2574,7 @@ function oaRender(id){
   if(id==='guidance'){
 
    main.append(oaElement('p','Opintoseurannan asetukset ja piilotettujen opintojaksojen valinnat säilyvät paikallisesti.'));
-   launch('Avaa ryhmäluettelo','/groups','progress');
+   launch('Avaa ryhmäluettelo','/groups','guidance');
   }
   if(id==='seating'){
    const row=oaElement('label','Ryhmäni-valikon oletusvälilehti');row.className='oa-template-field';
@@ -2622,11 +2622,11 @@ function oaCloseMenu(){oaModulePopup.hidden=true;oaLauncher.setAttribute('aria-e
 function oaToggleMenu(){
  if(!oaModulePopup.hidden){oaCloseMenu();return}
  oaModulePopup.replaceChildren();
- const groupId=location.pathname.match(/^\/groups\/(\d+)(?:\/|$)/)?.[1];
+ const classId=location.pathname.match(/^\/profiles\/classes\/(\d+)(?:\/|$)/)?.[1];
  for(const [name,href,moduleId]of oaMenuItems){
   if(moduleId&&oaRead()[moduleId]===false)continue;
   const a=oaElement('a',name);
-  a.href=groupId&&name==='Ryhmänohjaus'?'/profiles/classes/'+groupId+'/#wt-assessment':href;
+  a.href=classId&&name==='Ryhmänohjaus'?'/profiles/classes/'+classId+'/#wt-assessment':href;
   oaModulePopup.append(a);
  }
  const settings=oaElement('button','Asetukset');settings.type='button';settings.onclick=()=>{oaCloseMenu();oaOpen()};oaModulePopup.append(settings);
@@ -3004,6 +3004,7 @@ function oaMessagePeeker(host){
  host.prepend(button);
 }
 function installUnifiedMessageBar(){
+ if(oaRead().messages===false)return;
  if(!/^\/messages\/(?:compose(?:\/)?|\d+\/?)$/.test(location.pathname))return;
  const main=document.querySelector('main#main-content');
  if(!main||document.getElementById('wt-message-toolbar'))return;
@@ -3057,7 +3058,7 @@ if(!embeddedSearch&&/^\/profiles\/classes\/\d+(?:\/|$)/.test(currentPath))
  afterDom(()=>{(() => {
 'use strict';
 // Per-module state controlled by OpenApuri's in-app settings menu.
-try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').progress===false)return;}catch{}
+try {const prefs=JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}');if(prefs.guidance===false||(prefs.guidance===undefined&&prefs.progress===false))return;}catch{}
 
 // One-time compatible copy of older local data; never overwrite OpenApuri values.
 try {
