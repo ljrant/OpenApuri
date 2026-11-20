@@ -4202,7 +4202,7 @@ if(!embeddedSearch&&/^\/groups\/\d+\/seating\/?$/.test(currentPath)){
   };
   const GM_setValue=(key,value)=>{localStorage.setItem(SEATING_STORE+key,JSON.stringify(value))};
   const unsafeWindow=window;
-(() => {
+  try{(() => {
   'use strict';
   if(window.top!==window.self)return;
   if (!/^\/groups\/\d+\/seating\/?$/.test(location.pathname)) return;
@@ -5566,7 +5566,11 @@ table.wsp-grid .wsp-attendance-open[hidden]{display:none!important}
     status(conflict?'Tyhjäksi lukitun pöydän kohdalla on Wilmaan tallennettu oppilas. Siirrä tai arvo oppilas muualle tai vapauta tyhjä lukitus.':restoreError?'Automaattista tallennetta ei voitu palauttaa. Nimetyt pöytäjärjestykset ovat käytettävissä.':restored?'Pöydät, nimet, ryhmät ja tyhjät lukitukset palautettu.':'Valmis. Muokkaa pöytien nimiä ja ryhmänumeroita suoraan ruudukossa.');
   }
 })();
-
+  }catch(error){
+   console.error('[OpenApuri Istumajärjestys] Käynnistysvirhe:',error);
+   window.__openApuriSeatingIntegrated=false;
+   showSeatingError('Käynnistys epäonnistui: '+(error?.message||String(error)));
+  }
  });
 }
 
