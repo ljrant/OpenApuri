@@ -292,7 +292,11 @@ oaDialog.addEventListener('keydown',e=>{
   else if(!e.shiftKey&&document.activeElement===focusables[focusables.length-1]){e.preventDefault();focusables[0].focus()}
  }
 });
-window.addEventListener('openapuri:open-settings',e=>oaOpen(e.detail?.tab||'general'));
+window.addEventListener('openapuri:open-settings',e=>{
+ const tab=e.detail?.tab||'general';
+ const aliases={progress:'guidance',draftsChrome:'messages',draftsAndroid:'messages',templates:'messages'};
+ oaOpen(aliases[tab]||tab);
+});
 const oaLauncher=oaElement('button');oaLauncher.id='oa-launcher';oaLauncher.type='button';oaLauncher.title='OpenApuri · Asetukset';
 oaLauncher.setAttribute('aria-label','Avaa OpenApurin asetukset');
 const oaImg=oaElement('img');oaImg.alt='OpenApuri';oaImg.src=OA_LOGO;oaLauncher.append(oaImg);
@@ -392,7 +396,7 @@ const OA_GROUP_PREF='openapuri.groupOpeningTab.v1';
 const OA_GROUP_VIEWS=[['seating','Istumajärjestys'],['main','Ryhmän etusivu']];
 const oaGroupDestination=id=>{
  const n=encodeURIComponent(id),tab=localStorage.getItem(OA_GROUP_PREF)||'seating';
- return tab==='main'?'/groups/'+n:'/groups/'+n+'/seating';
+ return tab==='main'||oaRead().seating===false?'/groups/'+n:'/groups/'+n+'/seating';
 };
 let oaGroupsCache=null,oaGroupsFetch=null;
 async function oaGetGroups(){
