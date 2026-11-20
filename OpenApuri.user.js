@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.20
+// @version      1.0.21
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -3408,12 +3408,71 @@ const searchHeading=panel.querySelector('h2');searchHeading.style.position='rela
 const chooser=make('div','oh-chooser'),chooserLabel=make('label'),filter=make('input');
 filter.type='search';filter.placeholder='Hae opiskelijaa tai henkilökuntaa nimellä…';filter.autocomplete='off';
 chooserLabel.append(make('strong','','Etsi henkilöä'),filter);chooser.append(chooserLabel);
+
+/* Group-name search. Group membership is read only from the selected group's
+   main-page student profile links; never infer members from a similar name. */
+const ohGroupResults=make('div','oh-group-results');chooser.append(ohGroupResults);
+let ohGroups=null,ohGroupLoad=null;
+async function ohFetchGroups(){
+ if(ohGroups)return ohGroups;
+ if(ohGroupLoad)return ohGroupLoad;
+ ohGroupLoad=(async()=>{
+  const res=await fetch('/groups',{credentials:'same-origin'});
+  const final=new URL(res.url);
+  if(!res.ok||final.origin!==location.origin||!/^\/groups\/?$/.test(final.pathname))throw Error('Ryhmien lataus epäonnistui');
+  const doc=new DOMParser().parseFromString(await res.text(),'text/html'),groups=new Map();
+  for(const a of $('main a[href],#main-content a[href]',doc)){
+   let u;try{u=new URL(a.getAttribute('href'),location.origin)}catch{continue}
+   if(u.origin!==location.origin)continue;
+   const match=u.pathname.match(/^\/groups\/(\d+)(?:\/|$)/),name=clean(a.textContent);
+   if(match&&name&&name.length<120&&!groups.has(match[1]))groups.set(match[1],{id:match[1],name});
+  }
+  return [...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'fi'));
+ })();
+ try{ohGroups=await ohGroupLoad;return ohGroups}finally{ohGroupLoad=null}
+}
+async function ohSelectGroup(group){
+ try{
+  say('Haetaan ryhmän '+group.name+' jäsenet…');
+  const res=await fetch('/groups/'+encodeURIComponent(group.id),{credentials:'same-origin'});
+  const final=new URL(res.url);
+  if(!res.ok||final.origin!==location.origin||final.pathname.replace(/\/$/,'')!=='/groups/'+group.id)throw Error('Ryhmäsivua ei voitu avata');
+  const doc=new DOMParser().parseFromString(await res.text(),'text/html'),found=new Map();
+  for(const a of $('main a[href],#main-content a[href]',doc)){
+   let u;try{u=new URL(a.getAttribute('href'),location.origin)}catch{continue}
+   if(u.origin!==location.origin)continue;
+   const m=u.pathname.match(/^\/profiles\/students\/(\d+)\/?$/),name=clean(a.textContent);
+   if(m&&name&&name.length<120)found.set(m[1],{id:m[1],name,type:'student'});
+  }
+  if(!found.size){say('Ryhmäsivulta ei löytynyt varmistettavia opiskelijalinkkejä. Valintoja ei muutettu.',true);return}
+  const limit=250;let added=0;
+  for(const p of found.values()){
+   if(picked.size>=limit)break;
+   if(!picked.has(personKey(p))){picked.set(personKey(p),p);added++}
+   directory.set(p.id,p);
+  }
+  renderPicked();renderChoices();
+  say('Ryhmän '+group.name+' opiskelijoita valittu: '+found.size+' (uusia '+added+').'+(picked.size>=limit?' Enimmäismäärä 250.':''));
+ }catch(e){say('Ryhmän jäsenten haku epäonnistui: '+e.message,true)}
+}
+function ohRenderGroups(){
+ ohGroupResults.replaceChildren();
+ const q=norm(filter.value);if(!q||!ohGroups)return;
+ const matches=ohGroups.filter(g=>nameMatches(g.name,q)).slice(0,25);
+ if(!matches.length)return;
+ ohGroupResults.append(make('strong','','Opetusryhmät – valitse kaikki ryhmän opiskelijat'));
+ for(const group of matches){
+  const button=make('button','oh-group-choice',group.name+' · valitse jäsenet');
+  button.type='button';button.onclick=()=>ohSelectGroup(group);ohGroupResults.append(button);
+ }
+}
+
 const chooserActions=make('div'),refresh=make('button','','Päivitä luettelo'),directoryStatus=make('span','oh-help','');
 chooserActions.append(refresh,directoryStatus);chooser.append(chooserActions);
 const choices=make('div','oh-choices');choices.setAttribute('role','listbox');choices.setAttribute('aria-multiselectable','true');chooser.append(choices);panel.append(chooser);
 const form=make('div','oh-fields');
 const startLabel=make('label'),start=make('input');start.type='date';start.value=iso(new Date);startLabel.append(make('strong','','Alkaen'),start);
-const endLabel=make('label'),end=make('input');end.type='date';const endDate=new Date;endDate.setDate(endDate.getDate()+13);end.value=iso(endDate);endLabel.append(make('strong','','Päättyen'),end);const timeLabel=make('label'),useTime=make('input');useTime.type='checkbox';useTime.style.width='auto';const timeText=make('span','','Rajaa myös kellonaikaan (valinnainen)');timeLabel.append(useTime,timeText);timeLabel.className='oh-time-toggle';
+const endLabel=make('label'),end=make('input');end.type='date';const endDate=new Date;end.value=iso(endDate);endLabel.append(make('strong','','Päättyen'),end);const timeLabel=make('label'),useTime=make('input');useTime.type='checkbox';useTime.style.width='auto';const timeText=make('span','','Rajaa myös kellonaikaan (valinnainen)');timeLabel.append(useTime,timeText);timeLabel.className='oh-time-toggle';
 const clock=make('div','oh-fields');clock.hidden=true;const fromLabel=make('label'),fromTime=make('input');fromTime.type='time';fromTime.value='08:00';fromLabel.append(make('strong','','Alkaen klo'),fromTime);
 const toLabel=make('label'),toTime=make('input');toTime.type='time';toTime.value='16:00';toLabel.append(make('strong','','Päättyen klo'),toTime);clock.append(fromLabel,toLabel);useTime.onchange=()=>{clock.hidden=!useTime.checked};
 form.append(startLabel,endLabel);panel.append(form,timeLabel,clock);
@@ -3435,6 +3494,7 @@ for(const a of $$('a[href]',doc)){
 // Do not seed the picker from the default 'Ohjaamasi tai valvomasi opiskelijat' overview.
 // Names are loaded explicitly from the directory's full-list / alphabetical views.
 function renderChoices(){
+  ohRenderGroups();
   choices.replaceChildren();
   const q=norm(filter.value);
   const people=[...directory.values(),...teacherDirectory.values()]
@@ -3454,8 +3514,8 @@ function renderChoices(){
     button.onclick=()=>{
       const key=personKey(person);
       if(picked.has(key))picked.delete(key);
-      else if(picked.size<20)picked.set(key,person);
-      else{say('Enintään 20 henkilöä kerrallaan.',true);return}
+      else if(picked.size<250)picked.set(key,person);
+      else{say('Enintään 250 henkilöä kerrallaan.',true);return}
       renderPicked();renderChoices();
     };
     choices.append(button);
@@ -3465,6 +3525,7 @@ function renderChoices(){
 }
 filter.addEventListener('input',()=>{
   renderChoices();
+  if(!ohGroups&&!ohGroupLoad&&filter.value.trim())ohFetchGroups().then(renderChoices).catch(e=>console.warn('[OpenApuri Haku] Ryhmäluettelo:',e));
   if(!directoryLoading&&(!directoryLoaded||!teacherDirectoryLoaded))readDirectory();
 });
 async function readDirectory(force=false){
