@@ -2590,6 +2590,7 @@ function oaRender(id){
    row.append(select);main.append(row);
    const groupMatch=location.pathname.match(/^\/groups\/(\d+)(?:\/|$)/);
    launch('Avaa istumajärjestys',groupMatch?'/groups/'+groupMatch[1]+'/seating':'/groups','seating');
+   if(groupMatch)launch('Avaa pöytäeditori','/groups/'+groupMatch[1]+'/seating#wsp-editor','seating');
    main.append(oaElement('p','Istumajärjestykset ovat osa OpenApuria. Ryhmäkohtainen näkymä löytyy Wilman ryhmäsivulta.'));
   }
   if(id==='search'){
@@ -5607,6 +5608,7 @@ renderTags();renderAttendanceButtons();renderSourceVisibility();updateSaveMode()
     window.addEventListener('beforeunload',event=>{saveWorking();if(dirty||attendanceHasPending()){event.preventDefault();event.returnValue='';}});
     let restored=false,restoreError=false;restoringShared=true;try{restored=restoreWorking();}catch{restoreError=true;}finally{restoringShared=false;}
     window.addEventListener('focus',()=>{if(saving)return;const id=GM_getValue(`${KEY}:combined-link:${group}`,null);if(id){restoringShared=true;try{restoreWorking();}catch(e){status(e.message);}finally{restoringShared=false;}paint();}else if(sharedId){sharedId=null;installRoster({sources:[{id:group,label:groupName(document,group),students:clone(nativeRecords)}],active:[...nativeById.keys()]},nativeRecords,seats,gridSize(),false,true);status('Ryhmien yhdistäminen poistettiin toisessa näkymässä.');}});
+    if(location.hash==='#wsp-editor')switchPane('desks');
     refresh();paint();const conflict=snapshot().some(s=>seats.some(t=>t.emptyLocked&&coord(t)===coord(s)));
     status(conflict?'Tyhjäksi lukitun pöydän kohdalla on Wilmaan tallennettu oppilas. Siirrä tai arvo oppilas muualle tai vapauta tyhjä lukitus.':restoreError?'Automaattista tallennetta ei voitu palauttaa. Nimetyt pöytäjärjestykset ovat käytettävissä.':restored?'Pöydät, nimet, ryhmät ja tyhjät lukitukset palautettu.':'Valmis. Muokkaa pöytien nimiä ja ryhmänumeroita suoraan ruudukossa.');
   }
