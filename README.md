@@ -6,7 +6,7 @@ OpenApuri on avoimen lähdekoodin kokoelma Wilman selaintyökaluja. Projekti ei 
 
 ## Asennus — yksi skripti
 
-**Asenna vain [OpenApuri 1.0.27](https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuri.user.js).** Skripti toimii Wilman sivuilla Tampermonkeyssa. Se sisältää kaikki moduulit samassa asennuksessa:
+**Asenna vain [OpenApuri 1.0.28](https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuri.user.js).** Skripti toimii Wilman sivuilla Tampermonkeyssa. Se sisältää kaikki moduulit samassa asennuksessa:
 
 | Moduuli | Käyttö |
 | --- | --- |
@@ -246,12 +246,12 @@ OpenApurin työkalupalkin versiosta 0.23.2 alkaen Wilman logon vieressä näkyy 
 Asetusikkunan OpiskelijaHaku-näkymässä on `Avaa OpiskelijaHaku Wilmassa` -painike, joka vie nykyisen välilehden osoitteeseen `/profiles/students/#opiskelijahaku`. Jos moduuli oli pois käytöstä vain OpenApurin omassa asetustallennuksessa, se aktivoidaan samalla. Myös alapalkkiin lisättiin OpiskelijaHaku-pikatoiminto. Moduulin käyttöönottokytkin ei asenna skriptiä eikä voi käynnistää Tampermonkeyn kokonaan pois kytkemää skriptiä. Työkalupalkin päivitysosoitteet käyttävät nyt `ljrant/OpenApuri`-repon polkua.
 
 
-## OpenApuri 1.0.27 — yhdistetty käyttäjäskripti
+## OpenApuri 1.0.28 — yhdistetty käyttäjäskripti
 
 Kaikki viisi alkuperäistä Wilma-moduulia toimitetaan nyt yhden `OpenApuri.user.js`-skriptin mukana. Pääskripti suoritetaan `document-start`-vaiheessa, jotta viestiluonnosten tallennus käynnistyy riittävän aikaisin; käyttöliittymän moduulit käynnistetään vasta dokumentin valmistuttua. Kukin moduuli tarkistaa OpenApurin sisäisen `openapuri.modules.v1`-kytkimensä. Moduulien välille lisätyt käynnistyslukot vähentävät päällekkäistä käynnistymistä, mutta aiemmat erillisskriptit kannattaa poistaa käytöstä. Logo avaa sisäiset moduuliasetukset; erillistä HTML-asetussivua ei käytetä. Abitti-integraatio vaatii edelleen kyseisen palvelun osoitteen ja käyttöliittymärakenteen varmistamisen.
 
 
-## OpenApuri 1.0.27 – yhtenäinen tunnisteväri ja logo
+## OpenApuri 1.0.28 – yhtenäinen tunnisteväri ja logo
 
 - `OpenApuriLogo.svg` sijoitetaan Wilman alkuperäisen logon välittömään viereen samaan logoryhmään. Kuvaa näytetään aiempaa suurempana (yleensä 60–84 px; pienillä näytöillä 54 px). Kuvaketta painamalla avautuu OpenApurin sisäinen asetusvalikko.
 - Kun OpenApurin käyttäjäskripti on käynnissä, Wilman yläosan brändipalkki värjäytyy sinivihreäksi ja sen alareunaan lisätään turkoosi aktiivisuustunniste. Muutoin Wilman omat sivut ja navigaatio säilytetään alkuperäisinä.
@@ -261,28 +261,28 @@ Kaikki viisi alkuperäistä Wilma-moduulia toimitetaan nyt yhden `OpenApuri.user
 **Huom.** Ulkoasu on tarkistettu kooditasolla, mutta Wilman todellisen otsake-HTML:n sijainnin ja toimivuuden varmistaminen edellyttää selaintestausta.
 
 
-### OpenApuri 1.0.27 – yläpalkin logon koko
+### OpenApuri 1.0.28 – yläpalkin logon koko
 
 Wilman logon vieressä näkyvän OpenApuri-painikkeen koko rajattiin 40 pikselin korkeuteen ja SVG-kuva 36 × 36 pikseliin (pienillä näytöillä 36 / 32 pikseliin). Logo ei enää skaalaudu selainikkunan leveyden perusteella eikä venytä yläpalkkia.
 
 
-### OpenApuri 1.0.27 – tiiviimpi Wilman logoalue
+### OpenApuri 1.0.28 – tiiviimpi Wilman logoalue
 
 Wilman alkuperäisen logon ympärillä olevaa ylimääräistä vaakasuuntaista tilaa pienennetään vain OpenApurin luoman `#oa-brand-group`-logoryhmän sisällä. Alkuperäisen `.navbar-brand`-linkin leveys määräytyy sisällön mukaan; vasemman ja oikean reunan sisätila on 4 px ja OpenApuri-kuvake pysyy lähellä Wilma-tunnusta. Muuhun Wilman navigaatioon ei kohdisteta tätä tiivistystä.
 
 
-### Istumajärjestys sisältyy OpenApuriin (1.0.27)
+### Istumajärjestys sisältyy OpenApuriin (1.0.28)
 
 `OpenApuri.user.js` sisältää nyt myös istumajärjestysmoduulin. Erillistä istumajärjestysskriptiä ei tarvitse asentaa uusille käyttäjille. Aiempi itsenäinen versio tallensi tiedot Tampermonkeyn GM-tallennukseen. **Jos sinulla on vanhoja tallenteita**, päivitä vanha `modules/seating-plans.user.js` ensin versioon 1.5.2 ja käy kerran istumajärjestyssivulla: päivitys kopioi olemassa olevat tallenteet yhteiseen selainpohjaiseen tallennukseen ilman ylikirjoittamista. Poista sen jälkeen erillinen istumajärjestysskripti käytöstä, jotta kaksi versiota eivät toimi päällekkäin. Älä poista vanhaa skriptiä ennen tietojen siirtoa. Tiedot ovat edelleen selain- ja Wilma-osoitekohtaisia.
 
-### OpenApuri 1.0.27: alapalkin Ryhmäni-valikko ja asetukset
+### OpenApuri 1.0.28: alapalkin Ryhmäni-valikko ja asetukset
 
 - Alapalkin **Ryhmäni ▴** näyttää Wilman `/groups`-ryhmäluettelosta ladatut opetusryhmät. Valikko aukeaa ylöspäin, ja ryhmän valitseminen siirtyy oletuksena sen istumajärjestyssivulle.
 - **Asetukset → Istumajärjestys** antaa valita ryhmän avautumisen oletusnäkymäksi *Istumajärjestyksen* tai *Ryhmän etusivun*. Vain Wilman tunnetut ryhmäosoitteet ovat valittavina; muiden näkymien ryhmätunnisteita ei päätellä.
 - Alapalkista poistettiin erilliset *Viestipohjat* ja *Luonnokset*. **Asetukset → Viestipohjat** sisältää pohjien nimi-, aihe- ja sisältöeditorin. **Asetukset → Viestiluonnokset · Chrome/Android** sisältää automaattitallennuksen moduulin päälle/pois-valinnan; viestikirjaston luonnoksia voi edelleen käsitellä viestinäkymässä.
 - Yläpalkin OpenApuri-logon napsauttaminen avaa nyt alas avautuvan moduulivalikon, josta löytyvät haku, ryhmät, istumajärjestys, viestit, viestin kirjoitus ja asetukset.
 
-### OpenApuri 1.0.27 – neljä päämoduulia
+### OpenApuri 1.0.28 – neljä päämoduulia
 
 OpenApurin **neljä päämoduulia** ovat **Viestit** (luonnokset, viestipohjat), **Ohjausryhmä** (arviointikoonti, huomiot), **Istumajärjestys** ja **Haku**. Yleiset asetukset eivät ole moduuli.
 
@@ -294,7 +294,7 @@ OpenApurin **neljä päämoduulia** ovat **Viestit** (luonnokset, viestipohjat),
 
 Aiemmat itsenäiset Tampermonkey-moduulit on syytä poistaa käytöstä, kun OpenApuri-yhdistelmäskripti on asennettu, jotteivät kahdet tapahtumankäsittelijät suorita samoja toimintoja.
 
-### Istumajärjestys 1.6.0 (OpenApuri 1.0.27)
+### Istumajärjestys 1.6.0 (OpenApuri 1.0.28)
 
 Päivittäinen istumajärjestys avautuu oletuksena. Pöytäpohjan valinta ja linkki erilliseen pöytäeditorin muokkaustilaan ovat sivupalkissa. Istumajärjestyskentän yläpuolella on kuvakepainikkeet: **Kumoa (Ctrl+Z)**, **Tee uudelleen (Ctrl+Y tai Ctrl+Shift+Z)**, **Arvo** ja **Pöytäeditori**. Pöytäpohjat tallennetaan edelleen omiksi tallenteikseen ja kurssin nimetyt istumajärjestykset pysyvät saatavilla tiivistetyn valikon alla.
 
@@ -303,6 +303,11 @@ Automaattinen työtallenne tallentaa pöytärakenteen lisäksi nykyiset opiskeli
 Pöytäeditorin saa avattua ryhmäsivun istumajärjestyksessä ja OpenApurin asetusten kautta. Näkymä on saman sivun erillinen muokkaustila, joten editori ei vaihda Wilman alkuperäisiä opiskelijoiden raahaustoimintoja.
 
 
-### OpenApuri 1.0.27 – istumajärjestyksen korjaus
+### OpenApuri 1.0.28 – istumajärjestyksen korjaus
 
 Istumajärjestysmoduulin 1.6.0 käyttöliittymäuudistus peruttiin käynnistysvirheilmoitusten vuoksi. Versio 1.6.1 käyttää jälleen vakaamman version 1.5.2 toimintoja, mukaan lukien vanhat sivupalkkivalikot, pöytäjärjestysten muokkaus ja yhdistelmäryhmät. Tallennusavaimia tai tallenteiden tietomuotoja ei muutettu. Uuden päivittäisnäkymän, Ctrl+Y-toiminnon ja laajennetun paikkojen palautuksen toteutus ei ole käytössä tässä korjausversiossa.
+
+
+### OpenApuri 1.0.28 – istumajärjestyksen käynnistyskorjaus
+
+Yhdistetyn skriptin istumajärjestysmoduulin käynnistys esti itse itsensä: OpenApurin käynnistin asetti `__openApuriSeatingIntegrated`-lipun, ja sisäinen moduuli lopetti saman lipun perusteella ennen sivupaneelin luomista. Ylimääräinen sisäinen tarkistus poistettiin. Istumajärjestys käyttää vakaata 1.5.2-toteutusta (erillisen lähdetiedoston versionimi 1.6.1); tallennusavaimia ei muutettu.
