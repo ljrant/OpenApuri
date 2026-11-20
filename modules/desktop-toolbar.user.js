@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.19
+// @version      0.24.20
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -243,7 +243,11 @@ function oaRender(id){
   });
   if(id==='messages'){
    main.append(oaElement('h3','Luonnosten automaattitallennus'));
-   const explanation=oaElement('p','Viestien luonnokset tallennetaan selaimeen. Kun Viestit-moduuli on käytössä, automaattitallennus toimii tuetuilla selaimilla.');
+   const draftPref=oaElement('label');draftPref.className='oa-template-field';
+   const draftCheck=oaElement('input');draftCheck.type='checkbox';draftCheck.checked=localStorage.getItem('openapuri.draftAutosaveEnabled')!=='false';
+   draftCheck.onchange=()=>localStorage.setItem('openapuri.draftAutosaveEnabled',String(draftCheck.checked));
+   draftPref.append(draftCheck,oaElement('span','Tallenna viestiluonnokset automaattisesti'));main.append(draftPref);
+   const explanation=oaElement('p','Luonnokset tallennetaan vain tähän selaimeen. Asetus vaikuttaa uusiin tallennuksiin.');
    main.append(explanation);
    main.append(oaElement('h3','Viestipohjat'));
    oaTemplateSettings(main);
