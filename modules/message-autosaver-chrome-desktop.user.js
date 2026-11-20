@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Message Autosaver (Chrome Desktop)
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.16.21
+// @version      0.16.22
 // @description  Chrome desktop local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
@@ -1130,6 +1130,7 @@ try {
       window.addEventListener('openapuri:open-library',()=>{const lib=document.getElementById('wt-message-library');if(lib)lib.hidden=false;else library()});
     }
     function saveDraft(reason) {
+        if(localStorage.getItem('openapuri.draftAutosaveEnabled')==='false')return;
         if(setBodyHtml.pending)return;
         try {
             const draft = collectDraft();
