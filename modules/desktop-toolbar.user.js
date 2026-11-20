@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.18
+// @version      0.24.19
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -251,7 +251,7 @@ function oaRender(id){
   if(id==='guidance'){
 
    main.append(oaElement('p','Opintoseurannan asetukset ja piilotettujen opintojaksojen valinnat säilyvät paikallisesti.'));
-   launch('Avaa ryhmäluettelo','/groups','progress');
+   launch('Avaa ryhmäluettelo','/groups','guidance');
   }
   if(id==='seating'){
    const row=oaElement('label','Ryhmäni-valikon oletusvälilehti');row.className='oa-template-field';
@@ -299,11 +299,11 @@ function oaCloseMenu(){oaModulePopup.hidden=true;oaLauncher.setAttribute('aria-e
 function oaToggleMenu(){
  if(!oaModulePopup.hidden){oaCloseMenu();return}
  oaModulePopup.replaceChildren();
- const groupId=location.pathname.match(/^\/groups\/(\d+)(?:\/|$)/)?.[1];
+ const classId=location.pathname.match(/^\/profiles\/classes\/(\d+)(?:\/|$)/)?.[1];
  for(const [name,href,moduleId]of oaMenuItems){
   if(moduleId&&oaRead()[moduleId]===false)continue;
   const a=oaElement('a',name);
-  a.href=groupId&&name==='Ryhmänohjaus'?'/profiles/classes/'+groupId+'/#wt-assessment':href;
+  a.href=classId&&name==='Ryhmänohjaus'?'/profiles/classes/'+classId+'/#wt-assessment':href;
   oaModulePopup.append(a);
  }
  const settings=oaElement('button','Asetukset');settings.type='button';settings.onclick=()=>{oaCloseMenu();oaOpen()};oaModulePopup.append(settings);
@@ -681,6 +681,7 @@ function oaMessagePeeker(host){
  host.prepend(button);
 }
 function installUnifiedMessageBar(){
+ if(oaRead().messages===false)return;
  if(!/^\/messages\/(?:compose(?:\/)?|\d+\/?)$/.test(location.pathname))return;
  const main=document.querySelector('main#main-content');
  if(!main||document.getElementById('wt-message-toolbar'))return;
