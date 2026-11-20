@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Message Autosaver (Firefox Android)
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.6.4
+// @version      0.6.5
 // @description  Firefox Android local Wilma compose autosave: subject, body and recipients.
 // @match        https://*.inschool.fi/messages/compose*
 // @run-at       document-start
@@ -659,6 +659,7 @@ try {if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').messages=
     }
 
     function saveDraft(reason) {
+        if(localStorage.getItem('openapuri.draftAutosaveEnabled')==='false')return;
         try {
             const draft = collectDraft();
 
