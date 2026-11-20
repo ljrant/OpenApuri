@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.29
+// @version      1.0.30
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -4641,25 +4641,61 @@ table.wsp-grid .wsp-attendance-open[hidden]{display:none!important}
 #wsp-roster .wsp-import-box{background:var(--oa-surface,#f5fbf8)!important;border-color:var(--oa-border,#9cd7c5)!important}
 #wsp-panel :focus-visible,#wsp-roster :focus-visible,#wsp-attendance-dialog :focus-visible{outline-color:var(--oa-primary,#147c6e)!important}
 
+
+/* Seating workspace: daily-first sidebar, common OpenApuri header and peeker. */
+#wsp-panel{overflow:visible!important}
+#wsp-panel>.wsp-title{position:relative!important;display:flex!important;align-items:center!important;min-height:48px!important;padding:10px 62px 10px 12px!important;margin:-11px -11px 10px!important;overflow:visible!important;background:var(--oa-surface-accent,#e0f5eb)!important;color:var(--oa-primary-dark,#075b50)!important;border-bottom:2px solid var(--oa-border,#9cd7c5)!important}
+#wsp-panel>.wsp-title>.wsp-header-peeker{position:absolute!important;right:13px!important;bottom:-6px!important;top:auto!important;display:flex!important;align-items:center!important;justify-content:center!important;width:46px!important;height:46px!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;z-index:5!important}
+#wsp-panel>.wsp-title>.wsp-header-peeker img{display:block!important;width:46px!important;height:46px!important;object-fit:contain!important;pointer-events:none!important}
+#wsp-panel>.wsp-title>.wsp-header-peeker:hover{transform:translateY(-2px)}
+#wsp-panel .wsp-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:2px!important;margin:6px 0 12px!important}
+#wsp-panel .wsp-tabs>button{padding:8px 3px!important;font-size:11px!important;min-height:42px!important}
+#wsp-panel .wsp-intro{font-size:12px!important;line-height:1.45!important;color:var(--oa-muted,#52716c)!important;margin:4px 0 11px!important}
+#wsp-panel .wsp-daily-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0 12px}
+#wsp-panel .wsp-daily-actions button{white-space:normal!important;min-height:35px}
+#wsp-panel .wsp-card{border:1px solid var(--oa-border,#9cd7c5)!important;border-radius:7px!important;padding:8px 9px!important;background:#fff!important;margin:9px 0!important}
+#wsp-panel .wsp-card>summary{font-weight:700!important;padding:4px 0!important;color:var(--oa-primary-dark,#075b50)!important}
+#wsp-panel .wsp-card[open]>summary{margin-bottom:8px!important;border-bottom:1px solid var(--oa-border,#9cd7c5)!important}
+#wsp-panel .wsp-nested{margin:7px 0 0!important;border-top:1px solid var(--oa-border,#9cd7c5)!important;padding-top:5px}
+#wsp-panel .wsp-nested>summary{font-weight:600!important;font-size:11px!important}
+#wsp-panel .wsp-hint{color:var(--oa-muted,#52716c)!important;font-size:11px!important}
+
 </style>
-<h3>Istumajärjestys</h3>
+<h3 class="wsp-title">Istumajärjestys<button type="button" class="wsp-header-peeker" aria-label="Avaa istumajärjestyksen asetukset" title="Istumajärjestyksen asetukset"><img src="https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriPeeker.png" alt=""></button></h3>
 <div class="wsp-tabs" role="tablist" aria-label="Istumajärjestyksen asetukset">
-<button type="button" role="tab" id="wsp-students-tab" data-tab="students" aria-selected="true" aria-controls="wsp-students">Istumajärjestys</button>
-<button type="button" role="tab" id="wsp-desks-tab" data-tab="desks" aria-selected="false" aria-controls="wsp-desks">Pöytäjärjestys</button>
-<button type="button" role="tab" id="wsp-settings-tab" data-tab="settings" aria-selected="false" aria-controls="wsp-settings">Asetukset</button>
+<button type="button" role="tab" id="wsp-students-tab" data-tab="students" aria-selected="true" aria-controls="wsp-students">Paikat</button>
+<button type="button" role="tab" id="wsp-desks-tab" data-tab="desks" aria-selected="false" aria-controls="wsp-desks">Pöytäpohjat</button>
+<button type="button" role="tab" id="wsp-settings-tab" data-tab="settings" aria-selected="false" aria-controls="wsp-settings">Lisäasetukset</button>
 </div>
 <div id="wsp-students" data-pane="students" role="tabpanel" aria-labelledby="wsp-students-tab">
-<label>Oppilasjärjestys<select data-role="arrangements"><option value="">Valitse järjestys</option></select></label>
-<div class="wsp-row"><button data-action="loadArrangement">Palauta</button><button data-action="saveArrangement">Tallenna uutena</button><button data-action="updateArrangement">Päivitä</button></div>
-<details><summary>Tallenteen hallinta</summary><div class="wsp-row"><button data-action="renameArrangement">Nimeä</button><button data-action="deleteArrangement">Poista</button></div></details>
-<div class="wsp-row"><button data-action="undo">Kumoa</button><button data-action="unlock">Vapauta lukitukset</button></div>
-<h4>Wilma-tallennus</h4><p data-role="saveMode"></p><div class="wsp-row"><button data-action="saveGroups">Tallenna opetusryhmiin Wilmaan</button></div>
-<p>Alt-napsautus lukitsee oppilaan nykyiselle paikalleen. Arvonta ja kopiointi löytyvät istumajärjestyksen alta.</p>
+<p class="wsp-intro">Siirrä opiskelijoita suoraan ruudukossa. Pöytien ja lukitusten muutokset säilyvät automaattisessa työtallenteessa.</p>
+<div class="wsp-daily-actions">
+<button type="button" class="wsp-primary" data-action="undo" title="Kumoa edellinen muutos">↶ Kumoa muutos</button>
+<button type="button" data-action="unlock" title="Vapauta opiskelijoiden ja tyhjien pöytien lukitukset">Vapauta lukitukset</button>
+</div>
+<details class="wsp-card" open><summary>Kurssin istumajärjestykset</summary>
+<label>Valitse nimetty tallenne<select data-role="arrangements"><option value="">Valitse järjestys</option></select></label>
+<div class="wsp-row"><button class="wsp-primary" data-action="loadArrangement">Palauta valittu</button></div>
+<details class="wsp-nested"><summary>Tallenna tai hallitse järjestyksiä</summary>
+<div class="wsp-row"><button data-action="saveArrangement">Tallenna uutena</button><button data-action="updateArrangement">Päivitä valittu</button></div>
+<div class="wsp-row"><button data-action="renameArrangement">Nimeä</button><button data-action="deleteArrangement">Poista</button></div>
+</details>
+</details>
+<details class="wsp-card"><summary>Wilma-tallennus ja yhdistelmäryhmät</summary>
+<p data-role="saveMode"></p><div class="wsp-row"><button data-action="saveGroups">Tallenna opetusryhmiin Wilmaan</button></div>
+<p>Paikallinen työtallenne ja Wilman tallennus ovat eri asioita. Tallenna Wilmaan, kun haluat muutokset myös Wilman omaan järjestykseen.</p>
+</details>
+<p class="wsp-hint">Alt-napsautus lukitsee opiskelijan nykyiselle paikalleen.</p>
 </div>
 <div id="wsp-desks" data-pane="desks" role="tabpanel" aria-labelledby="wsp-desks-tab" hidden>
-<h4>Pöytäjärjestys ja paikat</h4><label>Pohja<select data-role="layouts"><option value="">Valitse pöytäjärjestys</option></select></label>
-<div class="wsp-row"><button data-action="loadLayout">Ota käyttöön</button><button data-action="saveLayout">Tallenna uutena</button><button data-action="updateLayout">Päivitä valittu</button></div>
-<details><summary>Pohjan hallinta</summary><div class="wsp-row"><button data-action="renameLayout">Nimeä</button><button data-action="deleteLayout">Poista</button></div></details>
+<p class="wsp-intro">Pöytäpohjat määrittävät istumapaikat ja pöytäryhmät. Voit käyttää samaa pohjaa eri opetusryhmillä.</p>
+<details class="wsp-card" open><summary>Valitse pöytäpohja</summary>
+<label>Tallennettu tai valmis pohja<select data-role="layouts"><option value="">Valitse pöytäjärjestys</option></select></label>
+<div class="wsp-row"><button class="wsp-primary" data-action="loadLayout">Ota pohja käyttöön</button></div>
+<details class="wsp-nested"><summary>Pohjan tallennus ja hallinta</summary>
+<div class="wsp-row"><button data-action="saveLayout">Tallenna uutena</button><button data-action="updateLayout">Päivitä valittu</button></div>
+<div class="wsp-row"><button data-action="renameLayout">Nimeä</button><button data-action="deleteLayout">Poista</button></div>
+</details></details>
 <details data-role="editorDetails"><summary>Pohjaeditori</summary>
 <label>Paikkoja yhteensä <input data-role="editorTotal" type="number" min="1" max="10000" style="width:85px"></label>
 <div class="wsp-editor-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
@@ -4676,9 +4712,19 @@ table.wsp-grid .wsp-attendance-open[hidden]{display:none!important}
 <details><summary>Muokkaus suoraan ruudukossa</summary><p>Valkoisen ruudun + lisää pöydän ja tyhjän pöydän × poistaa sen. Raahaa tyhjä pöytä valkoiseen ruutuun. Reunaan lisätyn tai siirretyn pöydän ulkopuolelle syntyy automaattisesti käytävä.</p><p>Muokkaa pöydän ”tyhjä”-tekstiä suoraan. Esimerkiksi opettajan pöytä: nimeä ja Alt-lukitse se tyhjäksi. Pelkkä nimen muuttaminen ei lukitse pöytää.</p><p>Ryhmämerkin numeroa voi muuttaa suoraan pöydässä. Sama numero yhdistää pöydät samaan ryhmään. Numeron vieressä näkyy ryhmän paikkamäärä. ↺ palauttaa automaattisen ryhmän.</p><p>Paikat, nimet, lukitukset ja ryhmänumerot tallentuvat automaattisesti tälle ryhmälle. Valmiit pohjat käyttävät yllä määritettyä paikkamäärää.</p></details>
 </div>
 <div id="wsp-settings" data-pane="settings" role="tabpanel" aria-labelledby="wsp-settings-tab" hidden>
-<h4>Oppilaat ja opetusryhmät</h4><div class="wsp-row"><button data-action="roster">Oppilaslista ja tunnisteet</button></div><h4>Näkyvyys</h4><div class="wsp-row"><button data-action="photos" aria-pressed="false">Piilota kuvat</button></div><h4>Varmuuskopiot</h4><div class="wsp-row"><button data-action="exportLayouts">Vie pöytäjärjestykset</button><button data-action="exportAll">Vie kaikki</button><button data-action="import">Tuo JSON</button></div><input data-role="file" type="file" accept=".json,application/json" hidden>
-<p>Kaikkien tietojen vienti sisältää opiskelijatietoja. Tallenteet säilyvät Tampermonkeyssa.</p><h4>Tuntimerkinnät</h4><a data-role="attendance">Avaa tuntimerkinnät</a><p>Ota tuntimerkintätila käyttöön istumajärjestyksen alta ja avaa opiskelijan kortin Merkintä-painike. Merkinnät tehdään Wilman omassa näkymässä.</p>
+<p class="wsp-intro">Harvemmin tarvittavat opiskelija-, näkymä- ja tallennusasetukset.</p>
+<details class="wsp-card" open><summary>Opiskelijat ja yhdistelmäryhmät</summary><div class="wsp-row"><button data-action="roster">Oppilaslista, ryhmät ja tunnisteet</button></div></details>
+<details class="wsp-card"><summary>Näkyvyys</summary><div class="wsp-row"><button data-action="photos" aria-pressed="false">Piilota kuvat</button></div></details>
+<details class="wsp-card"><summary>Varmuuskopiot ja tiedostot</summary><div class="wsp-row"><button data-action="exportLayouts">Vie pöytäpohjat</button><button data-action="exportAll">Vie kaikki</button><button data-action="import">Tuo JSON</button></div><input data-role="file" type="file" accept=".json,application/json" hidden>
+<p>Kaikkien tietojen vienti sisältää myös opiskelijatietoja. Tiedosto kannattaa säilyttää turvallisesti.</p></details>
+<details class="wsp-card"><summary>Tuntimerkinnät</summary><a data-role="attendance">Avaa Wilman tuntimerkinnät</a><p>Istumajärjestyksen alla voi ottaa käyttöön merkintätilan. Opiskelijan kortin Merkintä-painike avaa Wilman oman toiminnon.</p></details>
 </div><p role="status" aria-live="polite"></p>`;
+    const peeker=panel.querySelector('.wsp-header-peeker');
+    if(peeker)peeker.addEventListener('click',event=>{
+      event.preventDefault();event.stopPropagation();
+      if(window.__openApuriHub)window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'seating'}}));
+      else panel.querySelector('[data-tab="settings"]')?.click();
+    });
     const surface=table.parentElement;
     const shell=document.createElement('div');shell.className='wsp-layout';
     const board=document.createElement('div');board.className='wsp-board';
