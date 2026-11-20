@@ -4846,15 +4846,22 @@ table.wsp-grid .wsp-attendance-open[hidden]{display:none!important}
       const merged=new Map(restored.map(s=>[coord(s),s]));for(const s of live)if(!merged.has(coord(s)))merged.set(coord(s),{row:s.row,col:s.col});
       seats=[...merged.values()];
        const previous=state.assignments;
-       if(Array.isArray(previous)&&previous.length===cards.length&&
-         new Set(previous.map(p=>String(p.student))).size===cards.length&&
-         previous.every(p=>byId.has(String(p.student))&&validSeat(p))){
-         const pos=new Map(previous.map(p=>[String(p.student),p]));
+       const candidates=Array.isArray(previous)?previous:[];
+       const unique=new Set(candidates.map(p=>coord(p)));
+       const valid=candidates.length===cards.length&&
+         unique.size===cards.length&&
+         new Set(candidates.map(p=>String(p.student))).size===cards.length&&
+         candidates.every(p=>byId.has(String(p.student))&&validSeat(p)&&
+           seats.some(seat=>coord(seat)===coord(p))&&cellAt(p));
+       if(valid){
+         const pos=new Map(candidates.map(p=>[String(p.student),p]));
          for(const card of cards){
-           const target=pos.get(String(getStudent(card)));
-           const cell=cellAt(target);if(cell){cell.append(card);card.style.left='';card.style.top='';}
+           cellAt(pos.get(String(getStudent(card)))).append(card);
+           card.style.left='';card.style.top='';
          }
          last=sync();
+         // Merely reopening a locally saved arrangement is not a new edit.
+         dirty=false;
        }else last=snapshot();
        return true;
     }
