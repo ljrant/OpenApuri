@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpiskelijaHaku
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.6.16
+// @version      0.6.17
 // @description  Opiskelijoiden työjärjestysten opintojaksot ja opettajat
 // @match        https://*.inschool.fi/profiles/students*
 // @match        https://*.inschool.fi/profiles/teachers*
@@ -290,7 +290,32 @@ async function readDirectory(force=false){
   }finally{directoryLoading=false;refresh.disabled=false;renderChoices()}
 }
 refresh.onclick=()=>{directoryLoaded=false;teacherDirectoryLoaded=false;readDirectory(true)};
-function renderPicked(){selection.replaceChildren(make('strong','','Valitut henkilöt ('+picked.size+')'));const line=make('div');for(const p of picked.values()){const pill=make('span','oh-pill',p.name+' ');const remove=make('button','','×');remove.title='Poista';remove.onclick=()=>{picked.delete(personKey(p));renderPicked();renderChoices()};pill.append(remove);line.append(pill)}selection.append(line)}
+function renderPicked(){
+ selection.replaceChildren(make('strong','','Valitut henkilöt ('+picked.size+')'));
+ const line=make('div');
+ for(const p of picked.values()){
+  const pill=make('span','oh-pill',p.name+' '),remove=make('button','','×');
+  remove.type='button';remove.title='Poista';
+  remove.onclick=()=>{picked.delete(personKey(p));renderPicked();renderChoices()};
+  pill.append(remove);line.append(pill);
+ }
+ selection.append(line);
+ if(picked.size){
+  const compose=make('button','oh-action','Kirjoita viesti valituille ('+picked.size+')');
+  compose.type='button';compose.style.cssText='display:block;margin:10px 0';
+  compose.onclick=()=>{
+   const url=new URL('/messages/compose',location.origin);
+   for(const p of picked.values()){
+    if(!/^\d+$/.test(String(p.id)))continue;
+    url.searchParams.append(p.type==='teacher'?'r_teacher':'r_student',String(p.id));
+   }
+   if(!url.search){say('Vastaanottajia ei löytynyt.',true);return}
+   // Wilma opens the compose page with verified explicit recipient IDs.
+   window.open(url.href,'_blank','noopener');
+  };
+  selection.append(compose);
+ }
+}
 cancel.onclick=()=>abort?.abort();
 reset.onclick=()=>{picked.clear();rows=[];filter.value='';results.replaceChildren();renderPicked();renderChoices();say('Valinnat tyhjennetty.')};
 function blockMoment(block,week){
