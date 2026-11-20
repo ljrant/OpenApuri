@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.17
+// @version      0.24.18
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -47,17 +47,21 @@ const label=(tag,text)=>{const a=document.createElement(tag);a.textContent=text;
 
 const OA_LOGO='https://raw.githubusercontent.com/ljrant/OpenApuri/main/OpenApuriLogo.png';
 const OA_PREFS_KEY='openapuri.modules.v1';
+/* Four OpenApuri modules. Subfeatures belong to their parent module. */
 const OA_MODULES=[
- ['general','Yleiset','Kaikkien moduulien yhteiset asetukset'],
- ['progress','Opintoseuranta','Ryhmänohjaajan opintoseuranta'],
- ['search','OpiskelijaHaku','Opiskelijoiden ja henkilökunnan haku'],
- ['templates','Viestipohjat','Viestipohjien muokkaaminen'],
- ['seating','Istumajärjestys','Pöytäjärjestykset, arvonta ja yhdistelmäryhmät'],
- ['draftsChrome','Viestiluonnokset · Chrome','Viestien tallennus tietokoneella'],
- ['draftsAndroid','Viestiluonnokset · Android','Viestien tallennus Firefox Androidissa'],
- ['toolbar','Työkalupalkki','Wilman OpenApuri-toiminnot']
+ ['general','Yleiset','OpenApurin yhteiset asetukset'],
+ ['messages','Viestit','Luonnosten automaattitallennus ja viestipohjat'],
+ ['guidance','Ohjausryhmä','Arviointikoonti ja Huomiot'],
+ ['seating','Istumajärjestys','Pöytäjärjestykset ja yhdistelmäryhmät'],
+ ['search','Haku','Opiskelijoiden, henkilökunnan ja opetusryhmien haku']
 ];
-const oaRead=()=>{try{return JSON.parse(localStorage.getItem(OA_PREFS_KEY)||'{}')||{}}catch{return {}}};
+const oaRead=()=>{let d={};try{d=JSON.parse(localStorage.getItem(OA_PREFS_KEY)||'{}')||{}}catch{}
+ return {...d,
+  messages:d.messages!==undefined?d.messages:(d.draftsChrome===false&&d.draftsAndroid===false?false:true),
+  guidance:d.guidance!==undefined?d.guidance:d.progress!==false,
+  seating:d.seating!==false,
+  search:d.search!==false};
+};
 const oaWrite=(id,value)=>{const d=oaRead();d[id]=value;localStorage.setItem(OA_PREFS_KEY,JSON.stringify(d))};
 const oaGlobal=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch{return {}}};
 const oaElement=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e};
@@ -215,13 +219,12 @@ function oaRender(id){
   const button=oaElement('button',txt);button.type='button';
   button.style.cssText='background:#176393;color:#fff;border:0;border-radius:6px;padding:10px 15px;margin:5px 0 12px;cursor:pointer;font-weight:600';
   button.onclick=()=>{
-    if(moduleId&&oaRead()[moduleId]===false)oaWrite(moduleId,true);
+    if(moduleId&&oaRead()[moduleId]===false){main.append(oaElement('p','Ota moduuli ensin käyttöön asetuksista.'));return}
     // Same-tab navigation is intentional: this is a module launcher.
     location.assign(url);
   };
   main.append(button);
  };
- if(id==='templates'){oaTemplateSettings(main);main.focus();return}
  if(id==='general'){
   const label=oaElement('label','Kieli');
   const select=oaElement('select');
@@ -232,9 +235,21 @@ function oaRender(id){
   select.onchange=()=>{lang=select.value;localStorage.setItem(KEY,JSON.stringify({...oaGlobal(),lang}));draw()};
   label.append(select);main.append(label);
  }else{
-  if(id!=='toolbar')labeledToggle(id,'Moduuli käytössä',oaRead()[id]!==false,v=>oaWrite(id,v));
-  if(id==='progress'){
-   labeledToggle('progressEnabled','Opintoseuranta aktiivinen',oaGlobal().enabled!==false,v=>localStorage.setItem(KEY,JSON.stringify({...oaGlobal(),enabled:v})));
+  labeledToggle(id,'Moduuli käytössä',oaRead()[id]!==false,v=>{
+   oaWrite(id,v);
+   // Existing module code installs listeners at page load. Restart to apply
+   // both disabling and re-enabling, without leaving stale tab handlers.
+   location.reload();
+  });
+  if(id==='messages'){
+   main.append(oaElement('h3','Luonnosten automaattitallennus'));
+   const explanation=oaElement('p','Viestien luonnokset tallennetaan selaimeen. Kun Viestit-moduuli on käytössä, automaattitallennus toimii tuetuilla selaimilla.');
+   main.append(explanation);
+   main.append(oaElement('h3','Viestipohjat'));
+   oaTemplateSettings(main);
+  }
+  if(id==='guidance'){
+
    main.append(oaElement('p','Opintoseurannan asetukset ja piilotettujen opintojaksojen valinnat säilyvät paikallisesti.'));
    launch('Avaa ryhmäluettelo','/groups','progress');
   }
@@ -252,12 +267,7 @@ function oaRender(id){
    launch('Avaa OpiskelijaHaku Wilmassa','/profiles/students/#opiskelijahaku','search');
    main.append(oaElement('p','Haku avautuu suoraan Wilman opiskelijaluettelossa. Jos OpiskelijaHaku on poistettu käytöstä vain OpenApurin asetuksista, painike ottaa sen samalla takaisin käyttöön.'));
   }
-  if(id==='draftsChrome'||id==='draftsAndroid'){
-   main.append(oaElement('p','Luonnosten automaattitallennus on käytössä, kun tämä moduuli on käytössä. Muutos vaatii sivun päivityksen.'));
-   main.append(oaElement('p','Luonnoksia muokataan Wilman viestikirjastossa. Niitä ei lähetetä erilliselle palvelimelle.'));
-   launch('Avaa viestinkirjoitus','/messages/compose',id);
-  }
-  if(id==='toolbar')main.append(oaElement('p','OpenApurin alapalkki ja haku näkyvät kaikilla Wilman sivuilla.'));
+
  }
  main.focus();
 }
@@ -284,14 +294,17 @@ oaLauncher.setAttribute('aria-label','Avaa OpenApurin asetukset');
 const oaImg=oaElement('img');oaImg.alt='OpenApuri';oaImg.src=OA_LOGO;oaLauncher.append(oaImg);
 
 const oaModulePopup=oaElement('div');oaModulePopup.id='oa-module-menu';oaModulePopup.hidden=true;document.body.append(oaModulePopup);
-const oaMenuItems=[['Haku','/profiles/students/#opiskelijahaku'],['Ryhmät','/groups'],['Istumajärjestys','/groups'],['Viestit','/messages'],['Kirjoita viesti','/messages/compose']];
+const oaMenuItems=[['Haku','/profiles/students/#opiskelijahaku','search'],['Ryhmät','/groups',null],['Ryhmänohjaus','/groups','guidance'],['Viestit','/messages','messages']];
 function oaCloseMenu(){oaModulePopup.hidden=true;oaLauncher.setAttribute('aria-expanded','false')}
 function oaToggleMenu(){
  if(!oaModulePopup.hidden){oaCloseMenu();return}
  oaModulePopup.replaceChildren();
  const groupId=location.pathname.match(/^\/groups\/(\d+)(?:\/|$)/)?.[1];
- for(const [name,href]of oaMenuItems){
-  const a=oaElement('a',name);a.href=groupId&&name==='Istumajärjestys'?'/groups/'+groupId+'/seating':href;oaModulePopup.append(a);
+ for(const [name,href,moduleId]of oaMenuItems){
+  if(moduleId&&oaRead()[moduleId]===false)continue;
+  const a=oaElement('a',name);
+  a.href=groupId&&name==='Ryhmänohjaus'?'/profiles/classes/'+groupId+'/#wt-assessment':href;
+  oaModulePopup.append(a);
  }
  const settings=oaElement('button','Asetukset');settings.type='button';settings.onclick=()=>{oaCloseMenu();oaOpen()};oaModulePopup.append(settings);
  const r=oaLauncher.getBoundingClientRect();
@@ -421,7 +434,6 @@ function draw(){
  searchForm.append(searchInput,go);
  searchForm.onsubmit=event=>{
   event.preventDefault();
-  if(oaRead().search===false)oaWrite('search',true);
   const term=searchInput.value.trim();
   try{sessionStorage.setItem('openapuri.pendingSearch.v1',term)}catch{}
   if(/^\/profiles\/students\/?$/.test(location.pathname)){
@@ -431,7 +443,7 @@ function draw(){
   }
   location.assign('/profiles/students/#opiskelijahaku');
  };
- panel.append(searchForm);
+ if(oaRead().search!==false)panel.append(searchForm);
  const groups=label('div','');groups.className='oa-bottom-groups';
  const trigger=label('button',lang==='fi'?'Ryhmäni ▴':'My groups ▴');trigger.type='button';trigger.setAttribute('aria-controls','oa-groups-list');trigger.setAttribute('aria-expanded','false');
  const list=label('div','');list.id='oa-groups-list';list.className='oa-groups-popup';list.hidden=true;
