@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.28
+// @version      1.0.29
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -4177,7 +4177,21 @@ if(directoryPage){
 // Historical standalone GM_* storage is migrated by the optional standalone upgrade.
 if(!embeddedSearch&&/^\/groups\/\d+\/seating\/?$/.test(currentPath)){
  afterDom(()=>{
-  try{if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').seating===false)return}catch{}
+  const showSeatingError=message=>{
+   let box=document.getElementById('oa-seating-diagnostic');
+   if(!box){box=document.createElement('div');box.id='oa-seating-diagnostic';box.setAttribute('role','alert');
+     box.style.cssText='margin:10px 0;padding:12px 16px;border:2px solid #ba6328;border-radius:7px;background:#fff5e6;color:#633517;font:14px/1.5 system-ui;max-width:100%;box-sizing:border-box';
+     (document.querySelector('main#main-content')||document.querySelector('main')||document.body).prepend(box);
+   }
+   box.textContent='OpenApuri · Istumajärjestys: '+message;
+  };
+  window.__oaSeatingShowError=showSeatingError;
+  try{
+   if(JSON.parse(localStorage.getItem('openapuri.modules.v1')||'{}').seating===false){
+    showSeatingError('Moduuli on poistettu käytöstä OpenApurin asetuksissa.');
+    return;
+   }
+  }catch(error){console.warn('[OpenApuri] Istumajärjestyksen asetusta ei voitu lukea:',error)}
   if(window.__openApuriSeatingIntegrated)return;
   window.__openApuriSeatingIntegrated=true;
   const SEATING_STORE='openapuri.seating.gm:';
@@ -4410,8 +4424,19 @@ if(!embeddedSearch&&/^\/groups\/\d+\/seating\/?$/.test(currentPath)){
     const table = main && [...main.querySelectorAll('table')].sort((a,b) => b.querySelectorAll('.ui-draggable[id]').length-a.querySelectorAll('.ui-draggable[id]').length)[0];
     if (table?.querySelector('.ui-draggable[id]')) {
       try { start(main,table); clearInterval(timer); }
-      catch(e) { clearInterval(timer); alert(`Istumajärjestystyökalu: ${e.message}`); }
-    } else if (++tries > 40) clearInterval(timer);
+      catch(e) {
+        clearInterval(timer);
+        console.error('[OpenApuri Istumajärjestys] Paneelin muodostus epäonnistui:',e);
+        if(typeof window.__oaSeatingShowError==='function')
+          window.__oaSeatingShowError('Istumajärjestyksen avaaminen epäonnistui: '+e.message);
+        else alert(`Istumajärjestystyökalu: ${e.message}`);
+      }
+    } else if (++tries > 120) {
+      clearInterval(timer);
+      console.warn('[OpenApuri Istumajärjestys] Wilman siirrettävää opiskelijaruudukkoa ei löytynyt 30 sekunnissa.');
+      if(typeof window.__oaSeatingShowError==='function')
+        window.__oaSeatingShowError('Istumajärjestyksen opiskelijaruudukkoa ei löytynyt. Tarkista, että Wilman alkuperäinen istumajärjestys näkyy tällä sivulla.');
+    }
   }, 250);
 
   function start(main,table) {
