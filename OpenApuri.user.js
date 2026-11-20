@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.27
+// @version      1.0.28
 // @description  OpenApuri: yksi asennus, Wilman työkalut, värikoodatut lisänäkymät ja moduuliasetukset
 // @match        https://*.inschool.fi/*
 // @run-at       document-start
@@ -4204,8 +4204,8 @@ if(!embeddedSearch&&/^\/groups\/\d+\/seating\/?$/.test(currentPath)){
       }
     }
   }catch(error){console.warn('[OpenApuri seating] Tallenteiden siirto ei onnistunut:',error)}
-  if(window.__openApuriSeatingIntegrated)return;
-
+  // The bundle's outer loader already sets __openApuriSeatingIntegrated.
+  // Repeating that guard here prevented the bundled module from starting.
   const KEY = 'wilma-seating-plans:v1';
   const group = location.pathname.split('/')[2];
   const clone = x => JSON.parse(JSON.stringify(x));
