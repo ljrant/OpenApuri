@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wilma Seating Plans — standalone beta
 // @namespace    arviointiapina.seating
-// @version      1.6.1
+// @version      1.6.2
 // @description  Pöytäjärjestykset, oppilasjärjestykset, arvonta, yhdistelmäryhmät ja Wilman omat tuntimerkinnät.
 // @match        https://espoo.inschool.fi/groups/*/seating*
 // @grant        GM_getValue
@@ -235,8 +235,19 @@
     const table = main && [...main.querySelectorAll('table')].sort((a,b) => b.querySelectorAll('.ui-draggable[id]').length-a.querySelectorAll('.ui-draggable[id]').length)[0];
     if (table?.querySelector('.ui-draggable[id]')) {
       try { start(main,table); clearInterval(timer); }
-      catch(e) { clearInterval(timer); alert(`Istumajärjestystyökalu: ${e.message}`); }
-    } else if (++tries > 40) clearInterval(timer);
+      catch(e) {
+        clearInterval(timer);
+        console.error('[OpenApuri Istumajärjestys] Paneelin muodostus epäonnistui:',e);
+        if(typeof window.__oaSeatingShowError==='function')
+          window.__oaSeatingShowError('Istumajärjestyksen avaaminen epäonnistui: '+e.message);
+        else alert(`Istumajärjestystyökalu: ${e.message}`);
+      }
+    } else if (++tries > 120) {
+      clearInterval(timer);
+      console.warn('[OpenApuri Istumajärjestys] Wilman siirrettävää opiskelijaruudukkoa ei löytynyt 30 sekunnissa.');
+      if(typeof window.__oaSeatingShowError==='function')
+        window.__oaSeatingShowError('Istumajärjestyksen opiskelijaruudukkoa ei löytynyt. Tarkista, että Wilman alkuperäinen istumajärjestys näkyy tällä sivulla.');
+    }
   }, 250);
 
   function start(main,table) {
