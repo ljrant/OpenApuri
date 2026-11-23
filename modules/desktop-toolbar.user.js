@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.20
+// @version      0.24.21
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -53,14 +53,16 @@ const OA_MODULES=[
  ['messages','Viestit','Luonnosten automaattitallennus ja viestipohjat'],
  ['guidance','Ohjausryhmä','Arviointikoonti ja Huomiot'],
  ['seating','Istumajärjestys','Pöytäjärjestykset ja yhdistelmäryhmät'],
- ['search','Haku','Opiskelijoiden, henkilökunnan ja opetusryhmien haku']
+ ['search','Haku','Opiskelijoiden, henkilökunnan ja opetusryhmien haku'],
+ ['planner','Kurssisuunnitelma','Lukuvuoden kurssikokonaisuudet ja Excel-vienti']
 ];
 const oaRead=()=>{let d={};try{d=JSON.parse(localStorage.getItem(OA_PREFS_KEY)||'{}')||{}}catch{}
  return {...d,
   messages:d.messages!==undefined?d.messages:(d.draftsChrome===false&&d.draftsAndroid===false?false:true),
   guidance:d.guidance!==undefined?d.guidance:d.progress!==false,
   seating:d.seating!==false,
-  search:d.search!==false};
+  search:d.search!==false,
+  planner:d.planner!==false};
 };
 const oaWrite=(id,value)=>{const d=oaRead();d[id]=value;localStorage.setItem(OA_PREFS_KEY,JSON.stringify(d))};
 const oaGlobal=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch{return {}}};
@@ -252,6 +254,10 @@ function oaRender(id){
    main.append(oaElement('h3','Viestipohjat'));
    oaTemplateSettings(main);
   }
+  if(id==='planner'){
+   launch('Avaa kurssisuunnitelma','/#openapuri-kurssisuunnitelma','planner');
+   main.append(oaElement('p','Kurssisuunnitelma avautuu Wilman etusivulta. Kurssit haetaan vasta Muodosta kurssit -painikkeella. Excel-kirjasto ladataan vain vientiä varten.'));
+  }
   if(id==='guidance'){
 
    main.append(oaElement('p','Opintoseurannan asetukset ja piilotettujen opintojaksojen valinnat säilyvät paikallisesti.'));
@@ -302,7 +308,7 @@ oaLauncher.setAttribute('aria-label','Avaa OpenApurin asetukset');
 const oaImg=oaElement('img');oaImg.alt='OpenApuri';oaImg.src=OA_LOGO;oaLauncher.append(oaImg);
 
 const oaModulePopup=oaElement('div');oaModulePopup.id='oa-module-menu';oaModulePopup.hidden=true;document.body.append(oaModulePopup);
-const oaMenuItems=[['Haku','/profiles/students/#opiskelijahaku','search'],['Ryhmät','/groups',null],['Ryhmänohjaus','/groups','guidance'],['Viestit','/messages','messages']];
+const oaMenuItems=[['Haku','/profiles/students/#opiskelijahaku','search'],['Ryhmät','/groups',null],['Ryhmänohjaus','/groups','guidance'],['Viestit','/messages','messages'],['Kurssisuunnitelma','/#openapuri-kurssisuunnitelma','planner']];
 function oaCloseMenu(){oaModulePopup.hidden=true;oaLauncher.setAttribute('aria-expanded','false')}
 function oaToggleMenu(){
  if(!oaModulePopup.hidden){oaCloseMenu();return}
