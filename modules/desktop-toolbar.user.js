@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri - Desktop Sidebar
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      0.24.21
+// @version      0.24.22
 // @description  Finnish-first OpenApuri sidebar on every Wilma page
 // @match        https://*.inschool.fi/*
 // @updateURL    https://raw.githubusercontent.com/ljrant/OpenApuri/main/modules/desktop-toolbar.user.js
@@ -255,8 +255,8 @@ function oaRender(id){
    oaTemplateSettings(main);
   }
   if(id==='planner'){
-   launch('Avaa kurssisuunnitelma','/#openapuri-kurssisuunnitelma','planner');
-   main.append(oaElement('p','Kurssisuunnitelma avautuu Wilman etusivulta. Kurssit haetaan vasta Muodosta kurssit -painikkeella. Excel-kirjasto ladataan vain vientiä varten.'));
+   main.append(oaElement('p','Avaa Kurssisuunnitelma yläpalkin OpenApuri-apinan alasvetovalikosta. Tässä voit ottaa moduulin käyttöön tai pois käytöstä.'));
+   main.append(oaElement('p','Opintojaksot haetaan Wilmasta vasta Hae opintojaksot -painikkeella. Luo kokonaisuudet rastittamalla jaksot ja nimeämällä kokonaisuus.'));
   }
   if(id==='guidance'){
 
@@ -318,6 +318,14 @@ function oaToggleMenu(){
   if(moduleId&&oaRead()[moduleId]===false)continue;
   const a=oaElement('a',name);
   a.href=classId&&name==='Ryhmänohjaus'?'/profiles/classes/'+classId+'/#wt-assessment':href;
+  if(moduleId==='planner'){
+   a.href='#';
+   a.onclick=event=>{
+    event.preventDefault();
+    oaCloseMenu();
+    window.dispatchEvent(new CustomEvent('openapuri:open-course-planner'));
+   };
+  }
   oaModulePopup.append(a);
  }
  const settings=oaElement('button','Asetukset');settings.type='button';settings.onclick=()=>{oaCloseMenu();oaOpen()};oaModulePopup.append(settings);
