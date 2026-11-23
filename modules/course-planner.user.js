@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenApuri Kurssisuunnitelma (erillinen lähde)
 // @namespace    https://github.com/ljrant/OpenApuri
-// @version      1.0.0
+// @version      1.1.0
 // @description  Lukuvuoden kurssikokonaisuudet, muokkaus ja Excel-/Google Sheets -vienti.
 // @match        https://*.inschool.fi/*
 // @run-at       document-idle
@@ -56,7 +56,12 @@
     '#oa-planner .oa-course-list{border:1px solid var(--oa-border,#9cd7c5);border-radius:7px;overflow:auto;max-height:40vh;margin:10px 0}',
     '#oa-planner .oa-course-item{padding:11px 13px;border-bottom:1px solid var(--oa-border,#9cd7c5)}#oa-planner .oa-course-item:last-child{border-bottom:0}',
     '#oa-planner .oa-course-item strong{display:block;color:var(--oa-primary-dark,#075b50)}#oa-planner .oa-sub{font-size:12px;color:var(--oa-muted,#52716c);white-space:pre-wrap}',
-    '#oa-planner .oa-course-controls{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px;margin:7px 0;align-items:end}',
+    '#oa-planner .oa-course-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}',
+    '#oa-planner .oa-collection-tools{background:var(--oa-surface,#f5fbf8);border:1px solid var(--oa-border,#9cd7c5);padding:12px;border-radius:8px;margin:12px 0}',
+    '#oa-planner .oa-unit-label{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-weight:400}',
+    '#oa-planner .oa-unit-label input{width:20px;height:20px;margin:2px 0 0;flex-shrink:0;accent-color:var(--oa-primary,#147c6e)}',
+    '#oa-planner .oa-unit-label span{flex:1}',
+    '#oa-planner .oa-course-item:has(input:checked){background:var(--oa-surface-accent,#e0f5eb)}',
     '#oa-planner #oa-planner-status{margin:0;border-top:1px solid var(--oa-border,#9cd7c5);background:var(--oa-surface,#f5fbf8);padding:8px 18px;white-space:pre-line;max-height:92px;overflow:auto;font-size:12px}',
     '#oa-planner .oa-note{padding:10px 12px;background:var(--oa-surface,#f5fbf8);border-radius:6px;margin:10px 0}#oa-planner .oa-error{color:#9d2828}',
     '#oa-planner .oa-close{font-size:22px;border:0;background:transparent;color:var(--oa-primary-dark,#075b50);padding:4px 10px}',
@@ -186,7 +191,7 @@
     }
     logical=chains.map(chain=>{const fs=uniq(chain.map(clusterFamily)),long=uniq(chain.flatMap(c=>c.longNames));return {name:fs.length===1?fs[0]:long.length===1?long[0]:chain[0].courseNames[0]||'Kurssi',courseKeys:uniq(chain.flatMap(c=>c.courseKeys)),clusters:chain}}).sort((a,b)=>a.name.localeCompare(b.name,'fi'));
   }
-  const automatic=key=>logical.find(l=>l.courseKeys.includes(key))?.name||courses.find(c=>c.key===key)?.course||'';
+  const automatic=key=>{const c=courses.find(x=>x.key===key);if(!c)return '';const peers=courses.filter(x=>x.course===c.course);return peers.length===1?c.course:c.course+' · '+(c.groupId||String(peers.indexOf(c)+1))};
   const effective=key=>clean(moves[key])||automatic(key);
   function groups(){
     const g=new Map();for(const c of courses){const name=effective(c.key)||c.course;if(!g.has(name))g.set(name,{name,raw:[]});g.get(name).raw.push(c)}
@@ -264,14 +269,19 @@
     '<nav class="oa-planner-tabs" aria-label="Kurssisuunnitelman toiminnot"><button data-tab="build" aria-selected="true">Muodosta</button><button data-tab="edit" aria-selected="false">Kurssit</button><button data-tab="export" aria-selected="false">Vie suunnitelma</button></nav>'+
     '<div class="oa-planner-content">'+
     '<section data-pane="build"><div class="oa-fields"><label>Lukuvuoden alku<input id="oa-planner-start" type="date"></label><label>Lukuvuoden loppu<input id="oa-planner-end" type="date"></label></div>'+
-    '<p class="oa-note">Kurssit tunnistetaan Wilman lukujärjestyksestä: periodi + Palkki, BI02/BI03-yhdistäminen ja kurssien jatkuminen periodeilta toisille. Ryhmittelyä voi muokata ennen vientiä.</p>'+
-    '<button class="oa-action" id="oa-planner-build">Muodosta kurssit</button><label><input type="checkbox" id="oa-planner-fresh">Lataa uudet tiedot Wilmasta välimuistin sijaan</label>'+
+    '<p class="oa-note">Hae opintojaksot Wilmasta. Kurssikokonaisuudet kootaan itse rastittamalla; automaattisia yhdistelmiä ei tehdä.</p>'+
+    '<button class="oa-action" id="oa-planner-build">Hae opintojaksot</button><label><input type="checkbox" id="oa-planner-fresh">Lataa uudet tiedot Wilmasta välimuistin sijaan</label>'+
     '<button class="oa-action secondary" id="oa-planner-periods">Päivitä periodit</button></section>'+
-    '<section data-pane="edit" hidden><p class="oa-note">Yhdistä, nimeä uudelleen tai siirrä Wilman kurssit haluamiesi loogisten kurssien alle. Muutokset tallentuvat selaimeen.</p>'+
-    '<div class="oa-fields"><label>Uusi kurssikokonaisuus<input id="oa-planner-new" type="text" maxlength="120" placeholder="Esim. DP1 Biology"></label><div><button class="oa-action" id="oa-planner-add">Luo kurssi</button></div></div>'+
-    '<h3>Kurssikokonaisuudet</h3><div class="oa-course-list" id="oa-planner-groups">Muodosta kurssit ensin.</div>'+
-    '<h3>Wilman kurssit</h3><div class="oa-course-list" id="oa-planner-raw">Muodosta kurssit ensin.</div>'+
-    '<button class="oa-action secondary" id="oa-planner-reset">Palauta kaikki automaattiset ryhmittelyt</button></section>'+
+    '<section data-pane="edit" hidden><p class="oa-note">Rastita opintojaksot, kirjoita uuden kokonaisuuden nimi ja luo se. Tai lisää rastitetut jo aiemmin luotuun kokonaisuuteen.</p>'+
+    '<div class="oa-collection-tools"><p id="oa-planner-selected" aria-live="polite">0 opintojaksoa valittu</p>'+
+    '<label>Uuden kurssikokonaisuuden nimi<input id="oa-planner-new" type="text" maxlength="120" placeholder="Esim. DP1 Biology"></label>'+
+    '<button class="oa-action" id="oa-planner-add">Luo kokonaisuus valituista</button>'+
+    '<label>Lisää olemassa olevaan kokonaisuuteen<select id="oa-planner-target"><option value="">Valitse kurssikokonaisuus</option></select></label>'+
+    '<button class="oa-action secondary" id="oa-planner-assign">Lisää valitut tähän</button></div>'+
+    '<h3>Opintojaksot</h3><label><input id="oa-planner-all" type="checkbox"> Valitse kaikki</label><button class="oa-action secondary" id="oa-planner-clear-selection">Tyhjennä valinnat</button>'+
+    '<div class="oa-course-list" id="oa-planner-raw">Hae opintojaksot ensin.</div>'+
+    '<h3>Omat kurssikokonaisuudet</h3><div class="oa-course-list" id="oa-planner-groups">Ei vielä kokonaisuuksia.</div>'+
+    '<button class="oa-action secondary" id="oa-planner-reset">Poista käsin tehdyt yhdistelmät</button></section>'+
     '<section data-pane="export" hidden><p class="oa-note">Excel-tiedosto sisältää koko lukuvuoden näkymän, kurssikohtaiset oppitunnit, muistiinpanot, periodit ja kurssikartoituksen.</p>'+
     '<label><input type="checkbox" id="oa-planner-weekends">Sisällytä viikonloput päivänäkymään</label>'+
     '<label><input type="checkbox" id="oa-planner-rooms">Näytä opetustilat</label>'+
@@ -288,39 +298,66 @@
     overlay.addEventListener('click',e=>{if(e.target===overlay)close()});overlay.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close()}});
     const range=()=>{const start=l('#oa-planner-start').value,end=l('#oa-planner-end').value;if(!date(start)||!date(end)||start>end)throw Error('Virheellinen lukuvuoden aikaväli.');if((date(end)-date(start))/86400000>500)throw Error('Valitse enintään 500 päivän jakso.');return {start,end}};
     const run=async(fn)=>{if(busy)return;busy=true;for(const b of ui.querySelectorAll('.oa-action'))b.disabled=true;try{await fn()}catch(e){console.error('[Kurssisuunnitelma]',e);stat('Virhe: '+e.message)}finally{busy=false;for(const b of ui.querySelectorAll('.oa-action'))b.disabled=false}};
+    const selectedUnits=new Set();
+    function selectionStatus(){
+      l('#oa-planner-selected').textContent=selectedUnits.size+' opintojaksoa valittu';
+      const cb=l('#oa-planner-all');cb.checked=courses.length>0&&courses.every(c=>selectedUnits.has(c.key));
+      cb.indeterminate=!cb.checked&&selectedUnits.size>0;
+    }
     function render(){
-      const list=l('#oa-planner-groups'),raw=l('#oa-planner-raw');list.replaceChildren();raw.replaceChildren();
-      if(!courses.length){list.textContent='Muodosta kurssit ensin.';raw.textContent='Muodosta kurssit ensin.';return}
-      const gs=groups(),collapsed=collapse();
-      for(const g of gs){
-        const card=el('article',undefined,'oa-course-item'),title=el('strong',g.name+' · '+g.raw.length+' Wilma-kurssia · '+collapsed.filter(x=>x.LogicalCourse===g.name).length+' oppituntia'),detail=el('p',g.raw.map(x=>x.course+(x.longName?' – '+x.longName:'')).join('\n')||'Tyhjä kurssikokonaisuus','oa-sub');
-        const name=el('input');name.type='text';name.value=g.name;name.maxLength=120;name.setAttribute('aria-label','Kurssin uusi nimi');
-        const rename=el('button','Nimeä uudelleen','oa-action secondary');rename.onclick=()=>{const target=clean(name.value);if(!target)return;for(const item of g.raw)moves[item.key]=target;names=uniq([...names.filter(n=>n!==g.name),target]).sort();persist();render();stat('Kurssi nimetty uudelleen: '+g.name+' → '+target)};
-        card.append(title,detail,name,rename);
-        if(!g.raw.length&&names.includes(g.name)){const remove=el('button','Poista tyhjä','oa-action secondary');remove.onclick=()=>{names=names.filter(x=>x!==g.name);persist();render()};card.append(remove)}
+      const list=l('#oa-planner-groups'),raw=l('#oa-planner-raw'),target=l('#oa-planner-target');
+      list.replaceChildren();raw.replaceChildren();target.replaceChildren();
+      const empty=el('option','Valitse kokonaisuus');empty.value='';target.append(empty);
+      if(!courses.length){list.textContent='Ei vielä kokonaisuuksia.';raw.textContent='Hae opintojaksot ensin.';selectionStatus();return}
+      const own=groups().filter(g=>names.includes(g.name)||g.raw.some(c=>Object.hasOwn(moves,c.key)));
+      if(!own.length)list.textContent='Ei vielä kurssikokonaisuuksia. Rastita opintojaksot ja luo kokonaisuus.';
+      for(const g of own){
+        const opt=el('option',g.name);opt.value=g.name;target.append(opt);
+        const card=el('article',undefined,'oa-course-item');
+        card.append(el('strong',g.name+' · '+g.raw.length+' opintojaksoa'),el('p',g.raw.map(c=>c.course).join(', ')||'Tyhjä kokonaisuus','oa-sub'));
+        const name=el('input');name.type='text';name.value=g.name;name.maxLength=120;name.setAttribute('aria-label','Uusi nimi');
+        const rename=el('button','Nimeä uudelleen','oa-action secondary');
+        rename.onclick=()=>{const n=clean(name.value);if(!n||n===g.name)return;if(groups().some(x=>x.name===n)){stat('Samanniminen kokonaisuus on jo olemassa.');return}for(const c of g.raw)moves[c.key]=n;names=uniq([...names.filter(x=>x!==g.name),n]);persist();render()};
+        card.append(name,rename);
+        if(!g.raw.length){const del=el('button','Poista tyhjä','oa-action secondary');del.onclick=()=>{names=names.filter(x=>x!==g.name);persist();render()};card.append(del)}
         list.append(card);
       }
-      const destinations=gs.map(x=>x.name);
       for(const c of courses){
-        const card=el('article',undefined,'oa-course-item');
-        card.append(el('strong',c.course),el('div',[c.longName,c.periods.join(', '),c.palkit.length?'Palkki: '+c.palkit.join(', '):'',c.groupId?'Wilma: '+c.groupId:''].filter(Boolean).join(' · '),'oa-sub'));
-        const row=el('div',undefined,'oa-course-controls'),select=el('select');select.setAttribute('aria-label','Kurssikokonaisuus: '+c.course);
-        for(const name of destinations){const option=el('option',name);option.value=name;select.append(option)}select.value=effective(c.key);
-        const move=el('button','Siirrä','oa-action');move.onclick=()=>{moves[c.key]=select.value;names=uniq([...names,select.value]);persist();render();stat(c.course+' → '+select.value)};
-        const reset=el('button','Palauta','oa-action secondary');reset.onclick=()=>{delete moves[c.key];persist();render()};
-        row.append(select,move,reset);card.append(row);raw.append(card);
+        const card=el('article',undefined,'oa-course-item'),label=el('label',undefined,'oa-unit-label'),cb=el('input'),body=el('span');
+        cb.type='checkbox';cb.checked=selectedUnits.has(c.key);
+        cb.onchange=()=>{cb.checked?selectedUnits.add(c.key):selectedUnits.delete(c.key);selectionStatus()};
+        body.append(el('strong',c.course),el('span',[c.longName,c.periods.join(', '),c.palkit.length?'Palkki '+c.palkit.join(', '):'',c.groupId?'Ryhmä '+c.groupId:''].filter(Boolean).join(' · '),'oa-sub'));
+        label.append(cb,body);card.append(label);
+        if(Object.hasOwn(moves,c.key)&&clean(moves[c.key])){
+          const row=el('div',undefined,'oa-course-controls');row.append(el('span','Kokonaisuus: '+moves[c.key],'oa-sub'));
+          const remove=el('button','Irrota','oa-action secondary');remove.onclick=()=>{delete moves[c.key];persist();render()};row.append(remove);card.append(row);
+        }
+        raw.append(card);
       }
+      selectionStatus();
     }
+    function assign(name,create){
+      name=clean(name);if(!name){stat('Anna nimi tai valitse kurssikokonaisuus.');return}
+      const chosen=courses.filter(c=>selectedUnits.has(c.key));
+      if(!chosen.length){stat('Valitse ensin opintojaksot rastittamalla.');return}
+      if(create&&groups().some(g=>g.name===name)){stat('Nimi on jo käytössä. Valitse olemassa oleva kokonaisuus.');return}
+      for(const c of chosen)moves[c.key]=name;
+      names=uniq([...names,name]);persist();selectedUnits.clear();l('#oa-planner-new').value='';
+      render();stat(chosen.length+' opintojaksoa lisätty: '+name);
+    }
+    l('#oa-planner-all').onchange=e=>{selectedUnits.clear();if(e.target.checked)for(const c of courses)selectedUnits.add(c.key);render()};
+    l('#oa-planner-clear-selection').onclick=()=>{selectedUnits.clear();render()};
     l('#oa-planner-build').onclick=()=>run(async()=>{
-      const {start,end}=range();await discover(start,end,l('#oa-planner-fresh').checked);await scan(start,end,l('#oa-planner-fresh').checked);autoLogical();render();stat('Kurssit muodostettu: '+courses.length+' Wilman kurssia, '+groups().filter(g=>g.raw.length).length+' kurssikokonaisuutta, '+rows.length+' lukujärjestysriviä.');tab('edit');
+      const {start,end}=range();await discover(start,end,l('#oa-planner-fresh').checked);await scan(start,end,l('#oa-planner-fresh').checked);logical=[];selectedUnits.clear();render();stat('Haettu '+courses.length+' Wilman opintojaksoa ja '+rows.length+' lukujärjestysriviä. Rastita opintojaksot ja kokoa niistä kurssikokonaisuudet.');tab('edit');
     });
     l('#oa-planner-periods').onclick=()=>run(async()=>{const {start,end}=range();await discover(start,end,true);stat('Periodeja löytyi '+major.length+': '+major.map(x=>x.name+' '+x.start+'–'+x.end).join(', '))});
-    l('#oa-planner-add').onclick=()=>{const name=clean(l('#oa-planner-new').value);if(!name)return;names=uniq([...names,name]).sort();persist();l('#oa-planner-new').value='';render();stat('Uusi kurssikokonaisuus: '+name)};
-    l('#oa-planner-reset').onclick=()=>{if(!confirm('Palautetaanko kaikki kurssien käsin tehdyt sijoittelut?'))return;moves={};persist();render();stat('Automaattinen ryhmittely palautettu.')};
+    l('#oa-planner-add').onclick=()=>assign(l('#oa-planner-new').value,true);
+    l('#oa-planner-assign').onclick=()=>assign(l('#oa-planner-target').value,false);
+    l('#oa-planner-reset').onclick=()=>{if(!confirm('Poistetaanko kaikki itse tehdyt kurssiyhdistelmät?'))return;moves={};names=[];selectedUnits.clear();persist();render();stat('Yhdistelmät poistettu.');};
     const doExport=google=>run(async()=>{
       const {start,end}=range();
       prefs={includeWeekends:l('#oa-planner-weekends').checked,showRooms:l('#oa-planner-rooms').checked,showPalkki:l('#oa-planner-palkki').checked};save(K.settings,prefs);
-      if(!builtRange||builtRange.start!==start||builtRange.end!==end){await discover(start,end,false);await scan(start,end,false);autoLogical();render()}
+      if(!builtRange||builtRange.start!==start||builtRange.end!==end){await discover(start,end,false);await scan(start,end,false);logical=[];selectedUnits.clear();render()}
       stat('Ladataan Excel-kirjastoa ja muodostetaan tiedostoa…');
       const x=await getXLSX(),count=exportWorkbook(x,start,end,google);stat('Viety '+count+' kurssikokonaisuutta. Tarkista tarvittaessa Excelin tai Google Sheetsin kaavat.');
     });
@@ -332,16 +369,8 @@
     if(!enabled()){window.dispatchEvent(new CustomEvent('openapuri:open-settings',{detail:{tab:'planner'}}));return}
     const overlay=mountUI();overlay.hidden=false;open=true;l('.oa-close').focus();
   }
-  function home(){
-    if(!enabled()||!/^\/?$/.test(location.pathname)||document.getElementById('oa-planner-card'))return;
-    const root=document.querySelector('main#main-content')||document.querySelector('main')||document.querySelector('#main-content');if(!root)return;
-    mountStyle();const card=el('section',undefined);card.id='oa-planner-card';
-    card.append(el('h2','Kurssisuunnitelma'),el('p','Muodosta lukuvuoden opetuskurssit Wilman lukujärjestyksestä, yhdistä ja nimeä kurssit sekä vie vuosittainen suunnitelma Exceliin.'));
-    const btn=el('button','Avaa kurssisuunnitelma');btn.type='button';btn.onclick=launch;card.append(btn);root.prepend(card);
-  }
+  // Only the OpenApuri top drop-down invokes this action.
   window.addEventListener('openapuri:open-course-planner',launch);
-  const onReady=()=>{window.__openApuriCoursePlanner=true;home();if(location.hash==='#openapuri-kurssisuunnitelma')launch()};
+  const onReady=()=>{window.__openApuriCoursePlanner=true;};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',onReady,{once:true});else onReady();
-  // Late Wilma homepage content support. No background network scan.
-  if(/^\/?$/.test(location.pathname)){let n=0;const timer=setInterval(()=>{home();if(document.getElementById('oa-planner-card')||++n>=15)clearInterval(timer)},500)}
 })();
